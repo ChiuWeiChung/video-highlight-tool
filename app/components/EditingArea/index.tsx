@@ -1,8 +1,9 @@
-import React from 'react';
 import type { AIProcessResult, TranscriptSentence } from '../../types';
+import { formatTime } from '../../lib/utils';
+import { CheckIcon } from 'lucide-react';
 
 interface EditingAreaProps {
-  aiResult: AIProcessResult | null;
+  aiResult: AIProcessResult;
   onSentenceSelect: (sentenceId: string, isSelected: boolean) => void;
   onTimestampClick: (time: number) => void;
   currentTime?: number;
@@ -16,12 +17,6 @@ export default function EditingArea({
   currentTime = 0,
   className = "" 
 }: EditingAreaProps) {
-  
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const isCurrentSentence = (sentence: TranscriptSentence): boolean => {
     return currentTime >= sentence.startTime && currentTime <= sentence.endTime;
@@ -31,21 +26,6 @@ export default function EditingArea({
     onSentenceSelect(sentence.id, !sentence.isSelected);
   };
 
-  if (!aiResult) {
-    return (
-      <div className={`flex items-center justify-center h-full ${className}`}>
-        <div className="text-center text-gray-500">
-          <div className="w-16 h-16 mx-auto mb-4 text-gray-300">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 48 48" className="w-full h-full">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h30m-24 4h18m-12 4h6" />
-            </svg>
-          </div>
-          <p className="text-lg font-medium">等待 AI 處理完成</p>
-          <p className="text-sm mt-1">處理完成後將顯示轉錄文本</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={`h-full flex flex-col ${className}`}>
@@ -54,13 +34,10 @@ export default function EditingArea({
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">編輯區域</h2>
           <div className="flex items-center space-x-4 text-sm text-gray-500">
+            <span>總時長: {formatTime(aiResult.totalDuration)}</span>
             <span>
-              總時長: {formatTime(aiResult.totalDuration)}
-            </span>
-            <span>
-              {aiResult.sections.reduce((acc, section) => 
-                acc + section.sentences.filter(s => s.isSelected).length, 0
-              )} / {aiResult.sections.reduce((acc, section) => acc + section.sentences.length, 0)} 句已選
+              {aiResult.sections.reduce((acc, section) => acc + section.sentences.filter((s) => s.isSelected).length, 0)} /{' '}
+              {aiResult.sections.reduce((acc, section) => acc + section.sentences.length, 0)} 句已選
             </span>
           </div>
         </div>
@@ -76,15 +53,10 @@ export default function EditingArea({
                 <div className="flex items-center justify-between">
                   <h3 className="text-md font-medium text-gray-900">{section.title}</h3>
                   <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <button
-                      onClick={() => onTimestampClick(section.startTime)}
-                      className="hover:text-blue-600 transition-colors"
-                    >
+                    <button onClick={() => onTimestampClick(section.startTime)} className="hover:text-blue-600 transition-colors">
                       {formatTime(section.startTime)} - {formatTime(section.endTime)}
                     </button>
-                    <span className="text-xs">
-                      ({section.sentences.length} 句)
-                    </span>
+                    <span className="text-xs">({section.sentences.length} 句)</span>
                   </div>
                 </div>
               </div>
@@ -96,45 +68,36 @@ export default function EditingArea({
                     key={sentence.id}
                     className={`
                       group relative p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer
-                      ${sentence.isSelected 
-                        ? 'border-blue-500 bg-blue-50' 
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }
-                      ${isCurrentSentence(sentence) 
-                        ? 'ring-2 ring-yellow-400 ring-opacity-50' 
-                        : ''
-                      }
+                      ${sentence.isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}
+                      ${isCurrentSentence(sentence) ? 'ring-2 ring-yellow-400 ring-opacity-50' : ''}
                     `}
                     onClick={() => handleSentenceToggle(sentence)}
                   >
                     <div className="flex items-start space-x-3">
                       {/* 選擇框 */}
                       <div className="flex-shrink-0 mt-1">
-                        <div className={`
+                        <div
+                          className={`
                           w-5 h-5 rounded border-2 flex items-center justify-center transition-colors
-                          ${sentence.isSelected 
-                            ? 'border-blue-500 bg-blue-500' 
-                            : 'border-gray-300 group-hover:border-gray-400'
-                          }
-                        `}>
-                          {sentence.isSelected && (
-                            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
+                          ${sentence.isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300 group-hover:border-gray-400'}
+                        `}
+                        >
+                          {sentence.isSelected && <CheckIcon className="w-3 h-3 text-white" />}
                         </div>
                       </div>
 
                       {/* 句子內容 */}
                       <div className="flex-1 min-w-0">
-                        <p className={`
+                        <p
+                          className={`
                           text-sm leading-relaxed
                           ${sentence.isSelected ? 'text-blue-900' : 'text-gray-700'}
                           ${isCurrentSentence(sentence) ? 'font-medium' : ''}
-                        `}>
+                        `}
+                        >
                           {sentence.text}
                         </p>
-                        
+
                         <div className="flex items-center justify-between mt-2">
                           <button
                             onClick={(e) => {
@@ -143,10 +106,7 @@ export default function EditingArea({
                             }}
                             className={`
                               text-xs px-2 py-1 rounded transition-colors
-                              ${sentence.isSelected 
-                                ? 'text-blue-700 hover:text-blue-800 bg-blue-100 hover:bg-blue-200' 
-                                : 'text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200'
-                              }
+                              ${sentence.isSelected ? 'text-blue-700 hover:text-blue-800 bg-blue-100 hover:bg-blue-200' : 'text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200'}
                             `}
                           >
                             {formatTime(sentence.startTime)} - {formatTime(sentence.endTime)}

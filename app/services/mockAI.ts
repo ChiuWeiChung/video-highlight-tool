@@ -51,7 +51,7 @@ const convertToAPIFormat = (videoFile: File): AIProcessResult => {
     videoId,
     fullTranscript,
     sections,
-    totalDuration: sections[sections.length - 1].endTime,
+    totalDuration: sections[sections.length - 1].endTime, // Bug: 非總時長，而是最後一個片段的結束時間 
     processingTime: generateProcessingTime()
   };
 };

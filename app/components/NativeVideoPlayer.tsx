@@ -143,3 +143,42 @@ const NativeVideoPlayer = forwardRef<any, NativeVideoPlayerProps>((props, ref) =
 NativeVideoPlayer.displayName = 'NativeVideoPlayer';
 
 export default NativeVideoPlayer;
+
+
+
+// const demo = () => {
+//   return (
+//     <NativeVideoPlayer
+//       ref={playerRef}
+//       url={videoUrl}
+//       playing={isPlaying}
+//       volume={1}
+//       muted={false}
+//       width="100%"
+//       height="100%"
+//       onProgress={handleProgress}
+//       onDuration={handleDuration}
+//       onReady={handleReady}
+//       onError={handleError}
+//       onLoadStart={handleLoadStart}
+//       onCanPlay={handleCanPlay}
+//       onPlay={() => {
+//         console.log('Native: 播放開始');
+//         onPlay();
+//       }}
+//       onPause={() => {
+//         console.log('Native: 播放暫停');
+//         onPause();
+//       }}
+//       onEnded={() => {
+//         onPause();
+//         console.log('Native: 影片播放結束');
+//       }}
+//       style={{
+//         position: 'absolute',
+//         top: 0,
+//         left: 0,
+//       }}
+//     />
+//   );
+// };
