@@ -1,87 +1,80 @@
-# Welcome to React Router!
+# Video Highlight Tool - Frontend Homework Assignment
 
-A modern, production-ready template for building full-stack React applications using React Router.
+- You should provide
+  - Code on github
+  - Document about your technical choices
+  - An active url to run your work
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+- Support platforms:
+    - Desktop: windows & mac, latest Chrome
+    - Mobile: iOS & Android, latest Chrome & Safari
+ 
+- You can use claude or any AI tools to complete this homework.
 
-## Features
+## 1. Project Overview
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+Your task is to build a demo of a video highlight editing tool. This tool uses AI to help users create highlight clips from uploaded videos and add transcripts to these clips.
 
-## Getting Started
+*This image shows an example layout. Feel free to modify the design as long as you meet all the requirements.*
+<img width="1359" alt="image" src="https://gist.github.com/user-attachments/assets/d632451a-d688-42f1-abf7-9bcb7f1faaef">
 
-### Installation
 
-Install the dependencies:
+## 2. Key Features
 
-```bash
-npm install
-```
+### 2.1 Video Upload
+- Users can upload video files
 
-### Development
+### 2.2 Mock AI Processing
+- Use a mock API to simulate AI processing
+- The mock API should return:
+  - Full video transcript
+  - Transcript split into sections
+  - Titles for each section
+  - Suggested highlight sentences
+- All this data should be in JSON format
 
-Start the development server with HMR:
+### 2.3 User Interface
 
-```bash
-npm run dev
-```
+#### 2.3.1 Layout
+- Split screen design:
+  - Left side: Editing area
+  - Right side: Preview area
 
-Your application will be available at `http://localhost:5173`.
+#### 2.3.2 Editing Area (Left)
+- Shows the transcript with:
+  - Section titles
+  - Sentences and their timestamps
+- Users can select or unselect sentences for the highlight clip
+- Clickable timestamps for easy navigation
+- Auto-scrolls to follow preview playback
 
-## Building for Production
+#### 2.3.3 Preview Area (Right)
+- Shows the edited highlight clip, not the original video
+- Video player with standard controls (play, pause, seek)
+- Displays selected transcript text overlaid on the video
+- Timeline showing selected highlights
+- Smooth transition between selected clips
 
-Create a production build:
+#### 2.3.4 Synchronization
+- Editing Area to Preview Area:
+  - Clicking a timestamp updates the preview timeline to that time
+  - Selecting/unselecting sentences updates the preview content
+- Preview Area to Editing Area:
+  - During playback, the current sentence is highlighted in the editing area
+  - The editing area automatically scrolls to keep the current sentence visible
 
-```bash
-npm run build
-```
+### 2.4 Transcript Overlay
+- Selected sentences appear as text overlay on the video in the preview area
+- Text timing matches the audio of the selected clip
 
-## Deployment
+## 3. Evaluation Note
 
-### Docker Deployment
+Your submission will be evaluated based on the following criteria:
 
-To build and run using Docker:
-
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
-
----
-
-Built with ❤️ using React Router.
+- Implementation of the required features
+- Code quality and organization
+- Documentation quality
+- User experience (UX) design
+- Responsive web design (RWD) implementation
+- Quality and appropriateness of mock data
+- Overall efficacy and polish of the demo
