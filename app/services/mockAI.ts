@@ -3,7 +3,7 @@ import { MOCK_TRANSCRIPT_DATA } from './mockTranscriptData';
 
 // 生成隨機的處理時間（模擬 AI 處理）
 const generateProcessingTime = (): number => {
-  return Math.random() * 3000 + 2000; // 2-5秒
+  return 1000; // 1 秒
 };
 
 // 生成唯一 ID
@@ -71,12 +71,12 @@ export class MockAIService {
     onProgress?: (progress: number) => void
   ): Promise<MockAPIResponse<AIProcessResult>> {
     try {
-      console.log('🤖 Mock AI: 開始處理影片...', videoFile.name);
+      // console.log('🤖 Mock AI: 開始處理影片...', videoFile.name);
       
       // 模擬處理進度
       if (onProgress) {
         const progressInterval = setInterval(() => {
-          const currentProgress = Math.random() * 20 + 10; // 10-30% 隨機進度
+          const currentProgress = Math.random() * 20 + 40; // 10-30% 隨機進度
           onProgress(currentProgress);
         }, 300);
 
@@ -90,17 +90,18 @@ export class MockAIService {
         await simulateProcessingDelay(generateProcessingTime());
       }
 
+      // TODO: 取得結果需要是 json 格式!
       // 生成模擬結果
       const result = convertToAPIFormat(videoFile);
       
-      console.log('✅ Mock AI: 處理完成', {
-        sections: result.sections.length,
-        totalSentences: result.sections.reduce((acc, section) => acc + section.sentences.length, 0),
-        highlightCount: result.sections.reduce((acc, section) => 
-          acc + section.sentences.filter(s => s.isHighlight).length, 0
-        ),
-        duration: result.totalDuration
-      });
+      // console.log('✅ Mock AI: 處理完成', {
+      //   sections: result.sections.length,
+      //   totalSentences: result.sections.reduce((acc, section) => acc + section.sentences.length, 0),
+      //   highlightCount: result.sections.reduce((acc, section) => 
+      //     acc + section.sentences.filter(s => s.isHighlight).length, 0
+      //   ),
+      //   duration: result.totalDuration
+      // });
 
       return {
         success: true,

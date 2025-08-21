@@ -35,7 +35,7 @@ export default function Main() {
           handleAIProcessing(file);
           return 100;
         }
-        return prev + 10;
+        return prev + 40;
       });
     }, 200);
   };
@@ -49,7 +49,6 @@ export default function Main() {
       const result = await MockAIService.processVideo(file, (progress) => {
         setProcessingProgress(progress);
       });
-      console.log('result', result);
 
       if (result.success && result.data) {
         setAiResult(result.data);
@@ -117,7 +116,7 @@ export default function Main() {
   // 播放控制
   const handlePlay = useCallback(() => {
     if (!aiResult) return;
-    
+    console.log('handlePlay', aiResult);
     const selectedSentences = getSelectedSentences();
     if (selectedSentences.length === 0) {
       console.log('沒有選中的Highlight片段，無法播放');
