@@ -1,99 +1,62 @@
-import React, { useState, useRef, useEffect, type ReactEventHandler } from 'react';
-import ReactPlayerWrapper from '../ReactPlayerWrapper';
-import type { AIProcessResult, TranscriptSentence } from '../../types';
+import { useState,  useEffect, forwardRef } from 'react';
+import type {  TranscriptSentence } from '../../types';
 import { ArrowBigLeftIcon, ArrowBigRightIcon, Loader2Icon, PauseIcon, PlayIcon } from 'lucide-react';
 import { formatTime } from '../../lib/utils';
+import ReactPlayer from 'react-player'; // 使用完整的 ReactPlayer
 
 interface PreviewAreaProps {
-  aiResult: AIProcessResult;
-  uploadedVideo: File ;
+  uploadedVideo: File;
   currentTime: number;
-  onTimeUpdate: (time: number) => void;
-  onPlay: () => void;
-  onPause: () => void;
-  isPlaying: boolean;
+  // onTimeUpdate: (time: number) => void;
+  setCurrentTime: (time: number) => void;
   selectedSentences?: TranscriptSentence[];
-  className?: string;
-  getCurrentPlayingSentence: (time: number) => TranscriptSentence | undefined;
+
+  getHighlightSentenceByTime: (time: number) => TranscriptSentence | undefined;
   getNextSentence: (time: number) => TranscriptSentence | undefined;
+  getPreviousSentence: (time: number) => TranscriptSentence | undefined;
 }
 
-export default function PreviewArea({
-  aiResult,
-  uploadedVideo,
-  currentTime,
-  onTimeUpdate,
-  onPlay,
-  onPause,
-  isPlaying,
-  selectedSentences = [],
-  className = '',
-  getCurrentPlayingSentence,
-  getNextSentence,
-}: PreviewAreaProps) {
-  // video element
-  const playerRef = useRef<HTMLVideoElement>(null);
-  const [duration, setDuration] = useState(0);
+const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: PreviewAreaProps, playerRef) => {
+  const { uploadedVideo, currentTime, setCurrentTime, selectedSentences = [], getHighlightSentenceByTime, getNextSentence, getPreviousSentence } = props;
+  const [duration, setDuration] = useState<number>(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [playerReady, setPlayerReady] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const currentSubtitle = getHighlightSentenceByTime(currentTime)?.text;
+  const hasSelectedSentences = selectedSentences.length > 0;
 
-  // 創建影片 URL
+  // 建立影片 Object URL
   useEffect(() => {
-    if (uploadedVideo) {
-      const url = URL.createObjectURL(uploadedVideo);
-      setVideoUrl(url);
-      setPlayerReady(false); // 重置播放器狀態
-
-      return () => {
-        URL.revokeObjectURL(url);
-      };
-    }
+    const url = URL.createObjectURL(uploadedVideo);
+    setVideoUrl(url);
+    return () => {
+      URL.revokeObjectURL(url);
+    };
   }, [uploadedVideo]);
 
-  // 同步播放時間
-  // useEffect(() => {
-  //   const player = playerRef.current;
-  //   if (player && playerReady) {
-  //     // 檢查播放器是否已準備好且有必要的方法
-  //     if (typeof player.seekTo === 'function' && typeof player.getCurrentTime === 'function') {
-  //       try {
-  //         const currentPlayerTime = player.getCurrentTime();
-  //         if (Math.abs(currentPlayerTime - currentTime) > 0.5) {
-  //           console.log(`同步播放時間: ${currentPlayerTime}s → ${currentTime}s`);
-  //           player.seekTo(currentTime, 'seconds');
-  //         }
-  //       } catch (error) {
-  //         console.error('播放器時間同步錯誤:', error);
-  //       }
-  //     }
-  //   }
-  // }, [currentTime, playerReady]);
+  // 進行播放
+  const onPlay = () => {
+    setIsPlaying(true);
+  };
 
-  // Note: 只有影片第一次開始播放時觸發，之後不會再觸發
+  // 暫停播放
+  const onPause = () => {
+    setIsPlaying(false);
+  };
+
+  // 影片開始播放時 (只有影片第一次開始播放時觸發)
   const handleStart = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
-    console.log('onStart: 播放開始!!!');
     const target = e.target as HTMLVideoElement;
     const currentTime = target.currentTime;
 
-    // 如果當前時間不在任何選中句子範圍內，跳轉到第一個選中句子
-    const currentSentence = getCurrentPlayingSentence(currentTime);
-    if (!currentSentence && playerRef.current) {
+    // 如果當前時間不在任何 被選取字幕列表 範圍內，跳轉到第一個選中字幕
+    const currentSentence = getHighlightSentenceByTime(currentTime);
+    if (!currentSentence) {
       const { startTime } = selectedSentences[0];
-      playerRef.current.currentTime = startTime;
+      target.currentTime = startTime;
     }
   };
 
-  const handleReady = () => {
-    console.log('播放器已準備就緒');
-    setPlayerReady(true);
-  };
-
-  const handleError = (error: unknown) => {
-    console.error('播放器錯誤:', error);
-  };
-
   const handleCanPlay = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
-    console.log('影片可以播放');
     const target = e.target as HTMLVideoElement;
     setDuration(target.duration);
   };
@@ -101,121 +64,77 @@ export default function PreviewArea({
   // 當 video 播放時間變化時呼叫
   const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const target = e.target as HTMLVideoElement;
-
-    if (isPlaying) {
-      // TODO 待優化，如果沒有 selectedSentences，不應該進入此邏輯
-      if (selectedSentences.length === 0) {
-        console.log('沒有選中的Highlight片段，無法播放');
-        return;
-      }
-
-      // 檢查是否還在選中的句子範圍內
-      const playingSentence = getCurrentPlayingSentence(target.currentTime);
-
-      if (!playingSentence && playerRef.current) {
-        // 不在選中句子範圍內，查找下一個句子
-        const nextSentence = getNextSentence(target.currentTime);
-
-        if (nextSentence) {
-          // 跳轉到下一個句子的開始時間
-          console.log(`跳轉到下一個Highlight片段: ${nextSentence.startTime}s`);
-          playerRef.current.currentTime = nextSentence.startTime;
-          onTimeUpdate(nextSentence.startTime);
-        } else {
-          // 沒有更多句子，停止播放
-          console.log('所有Highlight片段播放完畢，停止播放');
-          onPause();
-        }
-      }else{
-        onTimeUpdate(target.currentTime);
-      }
-
-      // 如果當前句子播放完畢，檢查是否需要跳轉到下一個句子
-      // if (newTime >= playingSentence.endTime) {
-      //   const nextSentence = getNextSentence(newTime);
-
-      //   if (nextSentence) {
-      //     // 跳轉到下一個句子的開始時間
-      //     console.log(`當前片段結束，跳轉到下一個: ${nextSentence.startTime}s`);
-      //     return nextSentence.startTime;
-      //   } else {
-      //     // 沒有更多句子，停止播放
-      //     console.log('所有Highlight片段播放完畢，停止播放');
-      //     setIsPlaying(false);
-      //     clearInterval(interval);
-      //     return playingSentence.endTime;
-      //   }
-      // }
-
-      
-    }
+    // 如果 EditingArea 中的被選取字幕列表為空，不應該進入此邏輯
+    if (!hasSelectedSentences) return;
+    const playingSentence = getHighlightSentenceByTime(target.currentTime);
+    // 檢查是否還在 被選取字幕列表 範圍內
+    if (!playingSentence) {
+      // 不在選中字幕範圍內，查找下一個字幕
+      const nextSentence = getNextSentence(target.currentTime);
+      if (nextSentence) {
+        target.currentTime = nextSentence.startTime;
+        setCurrentTime(nextSentence.startTime);
+      } else onPause();
+    } else setCurrentTime(target.currentTime);
   };
 
-  const getCurrentSubtitle = (): string => {
-    if (selectedSentences.length === 0) return '';
-    const currentSentence = selectedSentences.find((sentence) => currentTime >= sentence.startTime && currentTime <= sentence.endTime);
-    return currentSentence?.text || '';
+  const renderHighlightSegments = () => {
+    return selectedSentences.map((sentence, index) => (
+      <div
+        key={index}
+        className="absolute top-0 h-full bg-blue-500 opacity-60"
+        style={{
+          left: `${(sentence.startTime / duration) * 100}%`,
+          width: `${((sentence.endTime - sentence.startTime) / duration) * 100}%`,
+        }}
+        title={sentence.text}
+      />
+    ));
   };
 
-  const getHighlightSegments = () => {
-    const totalDuration = duration > 0 ? duration : aiResult.totalDuration;
-
-    return selectedSentences.map((sentence) => ({
-      left: (sentence.startTime / totalDuration) * 100,
-      width: ((sentence.endTime - sentence.startTime) / totalDuration) * 100,
-      sentence,
-    }));
-  };
-
+  // 根據點擊進度條的位置計算對應的時間，並將播放器跳轉到該時間點
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const width = rect.width;
     const percentage = clickX / width;
-    const totalDuration = duration > 0 ? duration : aiResult.totalDuration;
-    const newTime = percentage * totalDuration;
-    onTimeUpdate(newTime);
+    const newTime = percentage * duration;
+
+    const player = playerRef as React.RefObject<HTMLVideoElement>;
+    if (player.current) player.current.currentTime = newTime;
   };
 
-  const currentSubtitle = getCurrentSubtitle();
-  
-
   return (
-    <div className={`h-full flex flex-col bg-gray-900 ${className}`}>
+    <div className="h-full flex flex-col bg-gray-900 rounded-lg overflow-hidden">
+
       {/* 標題欄 */}
       <div className="flex-shrink-0 bg-gray-800 border-b border-gray-700 p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">預覽區域</h2>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4 text-sm text-gray-300">
-              <span>已選片段: {selectedSentences.length}</span>
-              <span>預計時長: {formatTime(selectedSentences.reduce((acc, s) => acc + (s.endTime - s.startTime), 0))}</span>
-            </div>
+          <div className="flex items-center space-x-4 text-sm text-gray-300">
+            <span>已選片段: {selectedSentences.length}</span>
+            <span>總時長: {formatTime(selectedSentences.reduce((acc, s) => acc + (s.endTime - s.startTime), 0))}</span>
           </div>
         </div>
       </div>
 
       {/* 影片播放區域 */}
-      <div className="flex-1 relative bg-black flex items-center justify-center">
+      <div className="flex-1 relative bg-black flex items-center justify-center ">
         {videoUrl ? (
           <div className="relative w-full h-full">
-            <ReactPlayerWrapper
+            <ReactPlayer
               ref={playerRef}
               src={videoUrl}
               playing={isPlaying}
-              volume={1}
-              muted={false}
               controls={false}
               width="100%"
               height="100%"
               onStart={handleStart}
+              onPlay={onPlay}
+              onPause={onPause}
+              onEnded={onPause}
               onTimeUpdate={handleTimeUpdate}
-              onReady={handleReady}
-              onError={handleError}
               onCanPlay={handleCanPlay}
-              onPlay={onPlay} // TODO 待優化
-              onPause={onPause} // TODO 待優化
-              onEnded={onPause} // TODO 待優化
             />
 
             {/* 字幕覆蓋層 */}
@@ -231,14 +150,14 @@ export default function PreviewArea({
             <Loader2Icon className="w-12 h-12 animate-spin" />
             <p className="text-lg font-medium">正在載入影片...</p>
             <p className="w-1/2">{uploadedVideo?.name}</p>
-            <p className="text-gray-500">如果影片沒有顯示，請檢查文件格式是否支援</p>
           </div>
         )}
       </div>
 
       {/* 時間軸和控制區域 */}
       <div className="flex-shrink-0 bg-gray-800 p-4 space-y-4">
-        {/* Highlight時間軸 */}
+
+        {/* Highlight 時間軸 */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm text-gray-300">
             <span>Highlight 時間軸</span>
@@ -247,28 +166,18 @@ export default function PreviewArea({
             </span>
           </div>
 
+          {/* 背景軌道 */}
           <div className="relative h-8 bg-gray-700 rounded-lg cursor-pointer" onClick={handleProgressClick}>
-            {/* 背景軌道 */}
             <div className="absolute inset-0 rounded-lg overflow-hidden">
-              {/* Highlight片段 */}
-              {getHighlightSegments().map((segment, index) => (
-                <div
-                  key={index}
-                  className="absolute top-0 h-full bg-blue-500 opacity-60"
-                  style={{
-                    left: `${segment.left}%`,
-                    width: `${segment.width}%`,
-                  }}
-                  title={segment.sentence.text}
-                />
-              ))}
+              {/* Highlight 片段 */}
+              {renderHighlightSegments()}
             </div>
 
             {/* 當前時間指示器 */}
             <div
               className="absolute top-0 w-1 h-full bg-yellow-400 rounded-full transform -translate-x-1/2"
               style={{
-                left: `${(currentTime / (duration > 0 ? duration : aiResult.totalDuration)) * 100}%`,
+                left: `${(currentTime / duration) * 100}%`,
               }}
             />
           </div>
@@ -279,17 +188,13 @@ export default function PreviewArea({
           <button
             onClick={() => {
               if (selectedSentences.length > 0) {
-                const prevSentence = selectedSentences
-                  .slice()
-                  .reverse()
-                  .find((s) => s.startTime < currentTime);
-                if (prevSentence) {
-                  onTimeUpdate(prevSentence.startTime);
-                }
+                const prevSentence = getPreviousSentence(currentTime);
+                const videoEl = (playerRef as React.RefObject<HTMLVideoElement>).current;
+                if (prevSentence && videoEl) videoEl.currentTime = prevSentence.startTime;
               }
             }}
             className="p-2 text-gray-300 hover:text-white transition-colors disabled:opacity-50"
-            disabled={selectedSentences.length === 0}
+            disabled={!hasSelectedSentences}
             title="上一個片段"
           >
             <ArrowBigLeftIcon className="w-6 h-6" />
@@ -297,41 +202,31 @@ export default function PreviewArea({
 
           <button
             onClick={isPlaying ? onPause : onPlay}
-            className={`p-3 rounded-full transition-colors ${selectedSentences.length === 0 ? 'bg-gray-600 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
-            disabled={selectedSentences.length === 0}
-            title={selectedSentences.length === 0 ? '請先選擇Highlight片段' : isPlaying ? '暫停' : '播放'}
+            className={`p-3 rounded-full transition-colors ${!hasSelectedSentences ? 'bg-gray-600 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+            disabled={!hasSelectedSentences}
+            title={hasSelectedSentences ? '請先選擇 Highlight 片段' : isPlaying ? '暫停' : '播放'}
           >
             {isPlaying ? <PauseIcon className="w-6 h-6" /> : <PlayIcon className="w-6 h-6" />}
           </button>
 
           <button
             onClick={() => {
-              if (selectedSentences.length > 0) {
-                // Note: 已經排序過的 selectedSentences ，所以可以這樣找
-                const nextSentence = selectedSentences.find((s) => s.startTime > currentTime);
-                if (nextSentence && playerRef.current) {
-                  playerRef.current.currentTime = nextSentence.startTime;
-                }
+              if (hasSelectedSentences && (playerRef as React.RefObject<HTMLVideoElement>).current) {
+                const nextSentence = getNextSentence(currentTime);
+                const videoEl = (playerRef as React.RefObject<HTMLVideoElement>).current;
+                if (nextSentence && videoEl) videoEl.currentTime = nextSentence.startTime;
               }
             }}
             className="p-2 text-gray-300 hover:text-white transition-colors disabled:opacity-50"
-            disabled={selectedSentences.length === 0}
+            disabled={!hasSelectedSentences}
             title="下一個片段"
           >
             <ArrowBigRightIcon className="w-6 h-6" />
           </button>
         </div>
-        {/* 片段信息 */}
-        <div className="text-center text-sm text-gray-300">
-          {selectedSentences.length > 0 ? (
-            <p>
-              已選擇 {selectedSentences.length} 個片段， 總時長約 {formatTime(selectedSentences.reduce((acc, s) => acc + (s.endTime - s.startTime), 0))}
-            </p>
-          ) : (
-            <p className="text-yellow-400">⚠️ 請在左側編輯區域選擇要播放的Highlight片段</p>
-          )}
-        </div>
       </div>
     </div>
   );
-}
+});
+
+export default PreviewArea;

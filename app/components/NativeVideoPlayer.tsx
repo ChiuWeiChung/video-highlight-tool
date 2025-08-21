@@ -136,6 +136,7 @@ const NativeVideoPlayer = forwardRef<any, NativeVideoPlayerProps>((props, ref) =
         console.error('Native video: 播放錯誤', e);
         props.onError?.(e);
       }}
+      
     />
   );
 });

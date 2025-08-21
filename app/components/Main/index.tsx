@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import VideoUpload from '../VideoUpload';
 import EditingArea from '../EditingArea';
 import PreviewArea from '../PreviewArea';
@@ -8,50 +8,30 @@ import { CheckIcon, ClockIcon, Loader2Icon } from 'lucide-react';
 
 export default function Main() {
   const [uploadedVideo, setUploadedVideo] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [processingProgress, setProcessingProgress] = useState(0);
-  const [aiResult, setAiResult] = useState<AIProcessResult | null>(null);
+  const [processState, setProcessState] = useState<{ isProcess: boolean; progress: number }>({ isProcess: false, progress: 0 });
+  const [highlightClips, setHighlightClips] = useState<AIProcessResult | null>(null);
   const [error, setError] = useState<string>('');
-  
-  // 播放器狀態
+  const playerRef = useRef<HTMLVideoElement>(null);
+  // 播放器當前播放時間
   const [currentTime, setCurrentTime] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
 
   const handleVideoUpload = async (file: File) => {
     setError('');
-    setIsUploading(true);
-    setUploadProgress(0);
-    
-    // 模擬上傳進度
-    const uploadInterval = setInterval(() => {
-      setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(uploadInterval);
-          setIsUploading(false);
-          setUploadedVideo(file);
-          // 上傳完成後自動開始 AI 處理
-          handleAIProcessing(file);
-          return 100;
-        }
-        return prev + 40;
-      });
-    }, 200);
+    setUploadedVideo(file); // 儲存影片詳細資訊
+    handleAIProcessing(file); // 上傳完成後自動開始模擬 AI 處理
   };
 
   const handleAIProcessing = async (file: File) => {
-    setIsProcessing(true);
-    setProcessingProgress(0);
+    setProcessState({isProcess:true, progress:0});
     setError('');
 
     try {
       const result = await MockAIService.processVideo(file, (progress) => {
-        setProcessingProgress(progress);
+        setProcessState((prev) => ({...prev, progress}));
       });
 
       if (result.success && result.data) {
-        setAiResult(result.data);
+        setHighlightClips(result.data);
         console.log('AI 處理結果:', result.data);
       } else {
         setError(result.error || '處理失敗');
@@ -59,139 +39,74 @@ export default function Main() {
     } catch (err) {
       setError(err instanceof Error ? err.message : '未知錯誤');
     } finally {
-      setIsProcessing(false);
+      setProcessState((prev) => ({...prev, isProcess:false}));
     }
   };
 
   const handleStartOver = () => {
     setUploadedVideo(null);
-    setUploadProgress(0);
-    setProcessingProgress(0);
-    setAiResult(null);
+    setProcessState({isProcess:false, progress:0});
+    setHighlightClips(null);
     setError('');
     setCurrentTime(0);
-    setIsPlaying(false);
   };
 
-  // 句子選擇處理
+  // 字幕選擇處理
   const handleSentenceSelect = useCallback((sentenceId: string, isSelected: boolean) => {
-    if (!aiResult) return;
-    
-    const updatedResult = MockAIService.updateSentenceSelection(aiResult, sentenceId, isSelected);
-    setAiResult(updatedResult);
-  }, [aiResult]);
+    if (!highlightClips) return;
+    const updatedResult = MockAIService.updateSentenceSelection(highlightClips, sentenceId, isSelected);
+    setHighlightClips(updatedResult);
+  }, [highlightClips]);
 
   // 時間戳點擊處理
   const handleTimestampClick = useCallback((time: number) => {
     setCurrentTime(time);
+    if (playerRef.current) playerRef.current.currentTime = time;
   }, []);
 
-  // 獲取所有選中的句子，按時間排序
-  const getSelectedSentences = useCallback(() => {
-    if (!aiResult) return [];
-    return aiResult.sections
+  // TODO 應該在 API RESPONSE 中就排序好，這樣就不用每次都排序  
+  // 獲取所有選中的字幕，按時間排序
+  const selectedSentences = useMemo(() => {
+    if (!highlightClips) return [];
+    return highlightClips.sections
       .flatMap(section => section.sentences)
       .filter(sentence => sentence.isSelected)
       .sort((a, b) => a.startTime - b.startTime);
-  }, [aiResult]);
+  }, [highlightClips]);
 
-  // 查找當前時間點應該播放的句子
-  const getCurrentPlayingSentence = useCallback((time: number) => {
-    const selectedSentences = getSelectedSentences();
-    return selectedSentences.find(sentence => 
-      time >= sentence.startTime && time <= sentence.endTime
-    );
-  }, [getSelectedSentences]);
+  // 查找當前時間點應該播放的字幕
+  const getHighlightSentenceByTime = useCallback((time: number) => {
+    return selectedSentences.find(({ startTime, endTime }) => time >= startTime && time <= endTime);
+  }, [selectedSentences]);
 
-  // 查找下一個要播放的句子
+  // 查找下一個要播放的字幕
   const getNextSentence = useCallback((time: number) => {
-    const selectedSentences = getSelectedSentences();
     return selectedSentences.find(sentence => sentence.startTime > time);
-  }, [getSelectedSentences]);
+  }, [selectedSentences]);
 
-  // 播放控制
-  const handlePlay = useCallback(() => {
-    if (!aiResult) return;
-    // const selectedSentences = getSelectedSentences();
-    // if (selectedSentences.length === 0) {
-    //   console.log('沒有選中的Highlight片段，無法播放');
-    //   return;
-    // }
+  // 查找前一個要播放的字幕
+  const getPreviousSentence = useCallback((time: number) => {
+    const currentIndex = selectedSentences.findIndex(sentence => time >= sentence.startTime && time <= sentence.endTime);
+    // 如果當前時間在選中的字幕範圍內，則返回前一個字幕
+    if(currentIndex >= 0) return selectedSentences[currentIndex - 1];
+    return selectedSentences[0];
+  }, [selectedSentences]);
 
-    // // 如果當前時間不在任何選中句子範圍內，跳轉到第一個選中句子
-    // const currentSentence = getCurrentPlayingSentence(currentTime);
-    // if (!currentSentence) {
-    //   const firstSentence = selectedSentences[0];
-    //   setCurrentTime(firstSentence.startTime);
-    // }
-    
-    setIsPlaying(true);
-
-    // const interval = setInterval(() => {
-    //   setCurrentTime(prev => {
-    //     const newTime = prev + 0.1;
-        
-    //     // 檢查是否還在選中的句子範圍內
-    //     const playingSentence = getCurrentPlayingSentence(newTime);
-        
-    //     if (!playingSentence) {
-    //       // 不在選中句子範圍內，查找下一個句子
-    //       const nextSentence = getNextSentence(newTime);
-          
-    //       if (nextSentence) {
-    //         // 跳轉到下一個句子的開始時間
-    //         console.log(`跳轉到下一個Highlight片段: ${nextSentence.startTime}s`);
-    //         return nextSentence.startTime;
-    //       } else {
-    //         // 沒有更多句子，停止播放
-    //         console.log('所有Highlight片段播放完畢，停止播放');
-    //         setIsPlaying(false);
-    //         clearInterval(interval);
-    //         return prev;
-    //       }
-    //     }
-        
-    //     // 如果當前句子播放完畢，檢查是否需要跳轉到下一個句子
-    //     if (newTime >= playingSentence.endTime) {
-    //       const nextSentence = getNextSentence(newTime);
-          
-    //       if (nextSentence) {
-    //         // 跳轉到下一個句子的開始時間
-    //         console.log(`當前片段結束，跳轉到下一個: ${nextSentence.startTime}s`);
-    //         return nextSentence.startTime;
-    //       } else {
-    //         // 沒有更多句子，停止播放
-    //         console.log('所有Highlight片段播放完畢，停止播放');
-    //         setIsPlaying(false);
-    //         clearInterval(interval);
-    //         return playingSentence.endTime;
-    //       }
-    //     }
-        
-    //     return newTime;
-    //   });
-    // }, 100);
-  }, [aiResult, currentTime, getSelectedSentences, getCurrentPlayingSentence, getNextSentence]);
-
-  const handlePause = useCallback(() => {
-    setIsPlaying(false);
-  }, []);
-
+ 
   const handleTimeUpdate = useCallback((time: number) => {
     setCurrentTime(time);
   }, []);
 
   return (
-    <main className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">影片 Highlight 編輯工具</h1>
-          <p className="text-gray-600">上傳您的影片，使用 AI 技術自動生成精彩片段</p>
+    <main className="min-h-screen h-screen bg-gray-50 p-4">
+      <div className="container h-full mx-auto">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">影片 Highlight 生成工具</h1>
         </div>
 
         {!uploadedVideo ? (
-          <VideoUpload onVideoUpload={handleVideoUpload} isUploading={isUploading} uploadProgress={uploadProgress} />
-        ) : !aiResult ? (
+          <VideoUpload onVideoUpload={handleVideoUpload} />
+        ) : !highlightClips ? (
           <div className="max-w-4xl mx-auto">
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center justify-between mb-6">
@@ -217,22 +132,18 @@ export default function Main() {
                 {/* AI 處理狀態 */}
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isProcessing ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                      {isProcessing ? (
-                        <Loader2Icon className="w-6 h-6 text-blue-600 animate-spin" />
-                      ) : (
-                        <ClockIcon className="w-6 h-6 text-gray-400" />
-                      )}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${processState.isProcess ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                      {processState.isProcess ? <Loader2Icon className="w-6 h-6 text-blue-600 animate-spin" /> : <ClockIcon className="w-6 h-6 text-gray-400" />}
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-sm font-medium text-gray-900">{isProcessing ? 'AI 處理中...' : '等待 AI 處理'}</h3>
-                    {isProcessing && (
+                    <h3 className="text-sm font-medium text-gray-900">{processState.isProcess ? 'AI 處理中...' : '等待 AI 處理'}</h3>
+                    {processState.isProcess && (
                       <div className="mt-2">
                         <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div className="bg-blue-500 h-2 rounded-full transition-all duration-300" style={{ width: `${processingProgress}%` }}></div>
+                          <div className="bg-blue-500 h-2 rounded-full transition-all duration-300" style={{ width: `${processState.progress}%` }}></div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">{Math.round(processingProgress)}%</p>
+                        <p className="text-xs text-gray-500 mt-1">{Math.round(processState.progress)}%</p>
                       </div>
                     )}
                   </div>
@@ -249,43 +160,41 @@ export default function Main() {
           </div>
         ) : (
           /* 分屏編輯界面 */
-          <div className="h-screen flex flex-col">
+          <div className="flex flex-col gap-4">
             {/* 頂部工具欄 */}
-            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-3">
+            <header className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <h1 className="text-xl font-semibold text-gray-900">影片 Highlight 編輯器</h1>
-                  <div className="text-sm text-gray-500">{uploadedVideo.name}</div>
-                </div>
+                <span className="text-sm text-gray-500">{uploadedVideo.name}</span>
                 <button onClick={handleStartOver} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">
                   重新上傳
                 </button>
               </div>
-            </div>
+            </header>
 
             {/* 分屏內容區域 */}
-            <div className="flex-1 flex overflow-hidden">
+            {/* <div className="flex-1 flex md:flex-row flex-col gap-4 overflow-hidden"> */}
+            <div className="flex md:flex-row flex-col gap-4 overflow-hidden">
               {/* 左側：編輯區域 */}
-              <div className="w-1/2 border-r border-gray-200">
-                <EditingArea aiResult={aiResult} onSentenceSelect={handleSentenceSelect} onTimestampClick={handleTimestampClick} currentTime={currentTime} className="h-full" />
-              </div>
+              <EditingArea
+                highlightClips={highlightClips}
+                onSentenceSelect={handleSentenceSelect}
+                getHighlightSentenceByTime={getHighlightSentenceByTime}
+                onTimestampClick={handleTimestampClick}
+                currentTime={currentTime}
+              />
 
               {/* 右側：預覽區域 */}
-              <div className="w-1/2">
-                <PreviewArea
-                  aiResult={aiResult}
-                  uploadedVideo={uploadedVideo}
-                  currentTime={currentTime}
-                  onTimeUpdate={handleTimeUpdate}
-                  onPlay={handlePlay}
-                  onPause={handlePause}
-                  isPlaying={isPlaying}
-                  getCurrentPlayingSentence={getCurrentPlayingSentence}
-                  selectedSentences={getSelectedSentences()}
-                  getNextSentence={getNextSentence}
-                  className="h-full"
-                />
-              </div>
+
+              <PreviewArea
+                ref={playerRef}
+                uploadedVideo={uploadedVideo}
+                currentTime={currentTime}
+                setCurrentTime={setCurrentTime}
+                selectedSentences={selectedSentences}
+                getHighlightSentenceByTime={getHighlightSentenceByTime}
+                getNextSentence={getNextSentence}
+                getPreviousSentence={getPreviousSentence}
+              />
             </div>
           </div>
         )}

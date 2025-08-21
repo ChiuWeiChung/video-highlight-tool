@@ -24,7 +24,7 @@ const convertToAPIFormat = (videoFile: File): AIProcessResult => {
       startTime: sentence.startTime,
       endTime: sentence.endTime,
       isHighlight: sentence.isHighlight,
-      isSelected: sentence.isHighlight // 預設選中建議的Highlight句子
+      isSelected: sentence.isHighlight // 預設選中建議的 Highlight 字幕
     }));
 
     const section: TranscriptSection = {
@@ -120,7 +120,7 @@ export class MockAIService {
   }
 
   /**
-   * 更新句子選擇狀態
+   * 更新字幕選擇狀態
    */
   static updateSentenceSelection(
     result: AIProcessResult,
@@ -143,7 +143,7 @@ export class MockAIService {
   }
 
   /**
-   * 獲取選中的句子列表
+   * 獲取選中的字幕列表
    */
   static getSelectedSentences(result: AIProcessResult): TranscriptSentence[] {
     return result.sections

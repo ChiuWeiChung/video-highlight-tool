@@ -1,76 +1,94 @@
 import type { AIProcessResult, TranscriptSentence } from '../../types';
 import { formatTime } from '../../lib/utils';
 import { CheckIcon } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface EditingAreaProps {
-  aiResult: AIProcessResult;
+  highlightClips: AIProcessResult;
   onSentenceSelect: (sentenceId: string, isSelected: boolean) => void;
   onTimestampClick: (time: number) => void;
   currentTime?: number;
   className?: string;
+  getHighlightSentenceByTime: (time: number) => TranscriptSentence | undefined;
 }
 
 export default function EditingArea({ 
-  aiResult, 
+  highlightClips, 
   onSentenceSelect, 
   onTimestampClick, 
   currentTime = 0,
-  className = "" 
+  getHighlightSentenceByTime,
+  className
 }: EditingAreaProps) {
-
-  const isCurrentSentence = (sentence: TranscriptSentence): boolean => {
-    return currentTime >= sentence.startTime && currentTime <= sentence.endTime;
-  };
+  const sentenceRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const lastScrolledIdRef = useRef<string | null>(null);
+  const [autoFollow, setAutoFollow] = useState(true); // 是否跟隨播放進度自動捲動;
 
   const handleSentenceToggle = (sentence: TranscriptSentence) => {
     onSentenceSelect(sentence.id, !sentence.isSelected);
   };
+  
+  const currentSentence = useMemo(() => {
+    return getHighlightSentenceByTime(currentTime);
+  }, [currentTime]);
+  
+  const isCurrentSentence = (sentence: TranscriptSentence): boolean => {
+    if(!currentSentence) return false;
+    return currentSentence.id === sentence.id;
+  };
 
+  // 自動捲動到當前字幕
+  useEffect(() => {
+    if (!autoFollow || !currentSentence?.id) return;
+    if (lastScrolledIdRef.current === currentSentence.id) return;
+    const el = sentenceRefs.current[currentSentence.id];
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    lastScrolledIdRef.current = currentSentence.id;
+  }, [autoFollow, currentSentence?.id]);
 
   return (
-    <div className={`h-full flex flex-col ${className}`}>
+    <div className="h-[15rem] md:h-full flex flex-col border rounded-lg overflow-hidden border-gray-200">
       {/* 標題欄 */}
-      <div className="flex-shrink-0 bg-white border-b border-gray-200 p-4">
+      <div className="flex-shrink-0 bg-gray-800 text-white border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">編輯區域</h2>
-          <div className="flex items-center space-x-4 text-sm text-gray-500">
-            <span>總時長: {formatTime(aiResult.totalDuration)}</span>
+          <h2 className="text-lg font-semibold ">編輯區域</h2>
+          <div className="flex items-center space-x-4 ">
+            <label className="inline-flex items-center space-x-2 select-none">
+              <input type="checkbox" className="h-4 w-4 rounded border-gray-300  focus:ring-blue-500" checked={autoFollow} onChange={(e) => setAutoFollow(e.target.checked)} />
+              <span>跟隨播放</span>
+            </label>
             <span>
-              {aiResult.sections.reduce((acc, section) => acc + section.sentences.filter((s) => s.isSelected).length, 0)} /{' '}
-              {aiResult.sections.reduce((acc, section) => acc + section.sentences.length, 0)} 句已選
+              {highlightClips.sections.reduce((acc, section) => acc + section.sentences.filter((s) => s.isSelected).length, 0)} /{' '}
+              {highlightClips.sections.reduce((acc, section) => acc + section.sentences.length, 0)} 句已選
             </span>
           </div>
         </div>
       </div>
 
       {/* 轉錄文本內容 */}
-      <div className="flex-1 overflow-y-auto bg-gray-50">
-        <div className="p-4 space-y-6">
-          {aiResult.sections.map((section) => (
-            <div key={section.id} className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="flex-1 overflow-y-auto bg-gray-50 max-h-unset md:max-h-[70vh]">
+        <div className="lg:p-4 space-y-6">
+          {highlightClips.sections.map((section) => (
+            <div key={section.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               {/* 章節標題 */}
-              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-md font-medium text-gray-900">{section.title}</h3>
-                  <div className="flex items-center space-x-2 text-sm text-gray-500">
-                    <button onClick={() => onTimestampClick(section.startTime)} className="hover:text-blue-600 transition-colors">
-                      {formatTime(section.startTime)} - {formatTime(section.endTime)}
-                    </button>
-                    <span className="text-xs">({section.sentences.length} 句)</span>
-                  </div>
-                </div>
-              </div>
+              <h3 className="bg-gray-50 p-2 border-b border-gray-200 text-md font-medium text-gray-900 ">
+                {section.title}
+              </h3>
 
-              {/* 句子列表 */}
-              <div className="p-4 space-y-3">
+              {/* 字幕列表 */}
+              <div className="p-2 lg:p-4 space-y-3">
                 {section.sentences.map((sentence) => (
                   <div
                     key={sentence.id}
                     className={`
                       group relative p-3 rounded-lg border-2 transition-all duration-200 cursor-pointer
                       ${sentence.isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300 bg-white'}
-                      ${isCurrentSentence(sentence) ? 'ring-2 ring-yellow-400 ring-opacity-50' : ''}
+                      ${isCurrentSentence(sentence) ? 'ring-4 ring-yellow-400 ring-opacity-50' : ''}
                     `}
+                    ref={(el) => {
+                      if (el) sentenceRefs.current[sentence.id] = el;
+                    }}
                     onClick={() => handleSentenceToggle(sentence)}
                   >
                     <div className="flex items-start space-x-3">
@@ -86,11 +104,11 @@ export default function EditingArea({
                         </div>
                       </div>
 
-                      {/* 句子內容 */}
+                      {/* 字幕內容 */}
                       <div className="flex-1 min-w-0">
                         <p
                           className={`
-                          text-sm leading-relaxed
+                          text-xs md:text-sm leading-relaxed
                           ${sentence.isSelected ? 'text-blue-900' : 'text-gray-700'}
                           ${isCurrentSentence(sentence) ? 'font-medium' : ''}
                         `}
@@ -105,7 +123,7 @@ export default function EditingArea({
                               onTimestampClick(sentence.startTime);
                             }}
                             className={`
-                              text-xs px-2 py-1 rounded transition-colors
+                              text-xs px-2 py-1 rounded transition-colors cursor-pointer
                               ${sentence.isSelected ? 'text-blue-700 hover:text-blue-800 bg-blue-100 hover:bg-blue-200' : 'text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200'}
                             `}
                           >
@@ -122,13 +140,6 @@ export default function EditingArea({
                         </div>
                       </div>
                     </div>
-
-                    {/* 當前播放指示器 */}
-                    {isCurrentSentence(sentence) && (
-                      <div className="absolute -left-1 top-1/2 transform -translate-y-1/2">
-                        <div className="w-1 h-8 bg-yellow-400 rounded-full"></div>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
