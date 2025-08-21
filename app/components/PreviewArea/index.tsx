@@ -9,6 +9,7 @@ interface PreviewAreaProps {
   onPlay: () => void;
   onPause: () => void;
   isPlaying: boolean;
+  selectedSentences?: TranscriptSentence[];
   className?: string;
 }
 
@@ -20,6 +21,7 @@ export default function PreviewArea({
   onPlay,
   onPause,
   isPlaying,
+  selectedSentences = [],
   className = ""
 }: PreviewAreaProps) {
   
@@ -31,17 +33,8 @@ export default function PreviewArea({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const getSelectedSentences = (): TranscriptSentence[] => {
-    if (!aiResult) return [];
-    return aiResult.sections
-      .flatMap(section => section.sentences)
-      .filter(sentence => sentence.isSelected)
-      .sort((a, b) => a.startTime - b.startTime);
-  };
-
   const getCurrentSubtitle = (): string => {
-    if (!aiResult) return '';
-    const selectedSentences = getSelectedSentences();
+    if (!aiResult || selectedSentences.length === 0) return '';
     const currentSentence = selectedSentences.find(
       sentence => currentTime >= sentence.startTime && currentTime <= sentence.endTime
     );
@@ -49,7 +42,6 @@ export default function PreviewArea({
   };
 
   const getHighlightSegments = () => {
-    const selectedSentences = getSelectedSentences();
     const totalDuration = aiResult?.totalDuration || 100;
     
     return selectedSentences.map(sentence => ({
@@ -84,7 +76,6 @@ export default function PreviewArea({
     );
   }
 
-  const selectedSentences = getSelectedSentences();
   const currentSubtitle = getCurrentSubtitle();
 
   return (
@@ -136,10 +127,10 @@ export default function PreviewArea({
 
       {/* 時間軸和控制區域 */}
       <div className="flex-shrink-0 bg-gray-800 p-4 space-y-4">
-        {/* 高亮時間軸 */}
+        {/* Highlight時間軸 */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm text-gray-300">
-            <span>高亮片段時間軸</span>
+            <span>Highlight片段時間軸</span>
             <span>{formatTime(currentTime)} / {formatTime(aiResult.totalDuration)}</span>
           </div>
           
@@ -149,7 +140,7 @@ export default function PreviewArea({
           >
             {/* 背景軌道 */}
             <div className="absolute inset-0 rounded-lg overflow-hidden">
-              {/* 高亮片段 */}
+              {/* Highlight片段 */}
               {getHighlightSegments().map((segment, index) => (
                 <div
                   key={index}
@@ -176,8 +167,20 @@ export default function PreviewArea({
         {/* 播放控制 */}
         <div className="flex items-center justify-center space-x-4">
           <button
-            onClick={() => onTimeUpdate(Math.max(0, currentTime - 10))}
-            className="p-2 text-gray-300 hover:text-white transition-colors"
+            onClick={() => {
+              if (selectedSentences.length > 0) {
+                const prevSentence = selectedSentences
+                  .slice()
+                  .reverse()
+                  .find(s => s.startTime < currentTime);
+                if (prevSentence) {
+                  onTimeUpdate(prevSentence.startTime);
+                }
+              }
+            }}
+            className="p-2 text-gray-300 hover:text-white transition-colors disabled:opacity-50"
+            disabled={selectedSentences.length === 0}
+            title="上一個片段"
           >
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M15.707 15.707a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 010 1.414zm-6 0a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 1.414L5.414 10l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
@@ -186,7 +189,13 @@ export default function PreviewArea({
 
           <button
             onClick={isPlaying ? onPause : onPlay}
-            className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors"
+            className={`p-3 rounded-full transition-colors ${
+              selectedSentences.length === 0 
+                ? 'bg-gray-600 cursor-not-allowed opacity-50' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            } text-white`}
+            disabled={selectedSentences.length === 0}
+            title={selectedSentences.length === 0 ? '請先選擇Highlight片段' : isPlaying ? '暫停' : '播放'}
           >
             {isPlaying ? (
               <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -200,8 +209,17 @@ export default function PreviewArea({
           </button>
 
           <button
-            onClick={() => onTimeUpdate(Math.min(aiResult.totalDuration, currentTime + 10))}
-            className="p-2 text-gray-300 hover:text-white transition-colors"
+            onClick={() => {
+              if (selectedSentences.length > 0) {
+                const nextSentence = selectedSentences.find(s => s.startTime > currentTime);
+                if (nextSentence) {
+                  onTimeUpdate(nextSentence.startTime);
+                }
+              }
+            }}
+            className="p-2 text-gray-300 hover:text-white transition-colors disabled:opacity-50"
+            disabled={selectedSentences.length === 0}
+            title="下一個片段"
           >
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414zm6 0a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 01-1.414-1.414L14.586 10l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -210,14 +228,18 @@ export default function PreviewArea({
         </div>
 
         {/* 片段信息 */}
-        {selectedSentences.length > 0 && (
-          <div className="text-center text-sm text-gray-300">
+        <div className="text-center text-sm text-gray-300">
+          {selectedSentences.length > 0 ? (
             <p>
               已選擇 {selectedSentences.length} 個片段，
               總時長約 {formatTime(selectedSentences.reduce((acc, s) => acc + (s.endTime - s.startTime), 0))}
             </p>
-          </div>
-        )}
+          ) : (
+            <p className="text-yellow-400">
+              ⚠️ 請在左側編輯區域選擇要播放的Highlight片段
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

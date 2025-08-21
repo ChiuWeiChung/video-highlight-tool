@@ -4,7 +4,7 @@ export interface TranscriptSentence {
   text: string;
   startTime: number; // 秒
   endTime: number; // 秒
-  isHighlight: boolean; // 是否為建議的高亮句子
+  isHighlight: boolean; // 是否為建議的Highlight句子
   isSelected: boolean; // 用戶是否選中
 }
 

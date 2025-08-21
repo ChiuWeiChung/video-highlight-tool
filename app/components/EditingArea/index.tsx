@@ -152,7 +152,7 @@ export default function EditingArea({
                             {formatTime(sentence.startTime)} - {formatTime(sentence.endTime)}
                           </button>
 
-                          {/* 高亮建議標誌 */}
+                          {/* Highlight建議標誌 */}
                           {sentence.isHighlight && (
                             <div className="flex items-center space-x-1">
                               <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>

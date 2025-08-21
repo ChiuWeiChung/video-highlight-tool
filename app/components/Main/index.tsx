@@ -91,24 +91,93 @@ export default function Main() {
     setCurrentTime(time);
   }, []);
 
+  // 獲取所有選中的句子，按時間排序
+  const getSelectedSentences = useCallback(() => {
+    if (!aiResult) return [];
+    return aiResult.sections
+      .flatMap(section => section.sentences)
+      .filter(sentence => sentence.isSelected)
+      .sort((a, b) => a.startTime - b.startTime);
+  }, [aiResult]);
+
+  // 查找當前時間點應該播放的句子
+  const getCurrentPlayingSentence = useCallback((time: number) => {
+    const selectedSentences = getSelectedSentences();
+    return selectedSentences.find(sentence => 
+      time >= sentence.startTime && time <= sentence.endTime
+    );
+  }, [getSelectedSentences]);
+
+  // 查找下一個要播放的句子
+  const getNextSentence = useCallback((time: number) => {
+    const selectedSentences = getSelectedSentences();
+    return selectedSentences.find(sentence => sentence.startTime > time);
+  }, [getSelectedSentences]);
+
   // 播放控制
   const handlePlay = useCallback(() => {
     if (!aiResult) return;
+    
+    const selectedSentences = getSelectedSentences();
+    if (selectedSentences.length === 0) {
+      console.log('沒有選中的Highlight片段，無法播放');
+      return;
+    }
+
+    // 如果當前時間不在任何選中句子範圍內，跳轉到第一個選中句子
+    const currentSentence = getCurrentPlayingSentence(currentTime);
+    if (!currentSentence) {
+      const firstSentence = selectedSentences[0];
+      setCurrentTime(firstSentence.startTime);
+    }
     
     setIsPlaying(true);
     const interval = setInterval(() => {
       setCurrentTime(prev => {
         const newTime = prev + 0.1;
-        if (newTime >= aiResult.totalDuration) {
-          setIsPlaying(false);
-          clearInterval(interval);
-          return aiResult.totalDuration;
+        
+        // 檢查是否還在選中的句子範圍內
+        const playingSentence = getCurrentPlayingSentence(newTime);
+        
+        if (!playingSentence) {
+          // 不在選中句子範圍內，查找下一個句子
+          const nextSentence = getNextSentence(newTime);
+          
+          if (nextSentence) {
+            // 跳轉到下一個句子的開始時間
+            console.log(`跳轉到下一個Highlight片段: ${nextSentence.startTime}s`);
+            return nextSentence.startTime;
+          } else {
+            // 沒有更多句子，停止播放
+            console.log('所有Highlight片段播放完畢，停止播放');
+            setIsPlaying(false);
+            clearInterval(interval);
+            return prev;
+          }
         }
+        
+        // 如果當前句子播放完畢，檢查是否需要跳轉到下一個句子
+        if (newTime >= playingSentence.endTime) {
+          const nextSentence = getNextSentence(newTime);
+          
+          if (nextSentence) {
+            // 跳轉到下一個句子的開始時間
+            console.log(`當前片段結束，跳轉到下一個: ${nextSentence.startTime}s`);
+            return nextSentence.startTime;
+          } else {
+            // 沒有更多句子，停止播放
+            console.log('所有Highlight片段播放完畢，停止播放');
+            setIsPlaying(false);
+            clearInterval(interval);
+            return playingSentence.endTime;
+          }
+        }
+        
         return newTime;
       });
     }, 100);
     setPlaybackInterval(interval);
-  }, [aiResult]);
+  }, [aiResult, currentTime, getSelectedSentences, getCurrentPlayingSentence, getNextSentence]);
 
   const handlePause = useCallback(() => {
     setIsPlaying(false);
@@ -267,6 +336,7 @@ export default function Main() {
                   onPlay={handlePlay}
                   onPause={handlePause}
                   isPlaying={isPlaying}
+                  selectedSentences={getSelectedSentences()}
                   className="h-full"
                 />
               </div>
