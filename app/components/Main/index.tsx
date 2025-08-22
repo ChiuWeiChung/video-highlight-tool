@@ -186,7 +186,7 @@ export default function Main() {
               {/* 右側：預覽區域 */}
 
               <PreviewArea
-                ref={playerRef}
+                playerRef={playerRef}
                 uploadedVideo={uploadedVideo}
                 currentTime={currentTime}
                 setCurrentTime={setCurrentTime}

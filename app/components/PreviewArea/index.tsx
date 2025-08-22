@@ -1,23 +1,30 @@
-import { useState,  useEffect, forwardRef } from 'react';
-import type {  TranscriptSentence } from '../../types';
+import { useState, useEffect, type RefObject, useMemo } from 'react';
+import type { TranscriptSentence } from '../../types';
 import { ArrowBigLeftIcon, ArrowBigRightIcon, Loader2Icon, PauseIcon, PlayIcon } from 'lucide-react';
 import { formatTime } from '../../lib/utils';
-import ReactPlayer from 'react-player'; // 使用完整的 ReactPlayer
+import ReactPlayer from 'react-player';
 
 interface PreviewAreaProps {
   uploadedVideo: File;
   currentTime: number;
-  // onTimeUpdate: (time: number) => void;
   setCurrentTime: (time: number) => void;
   selectedSentences?: TranscriptSentence[];
-
   getHighlightSentenceByTime: (time: number) => TranscriptSentence | undefined;
   getNextSentence: (time: number) => TranscriptSentence | undefined;
   getPreviousSentence: (time: number) => TranscriptSentence | undefined;
+  playerRef: RefObject<HTMLVideoElement | null>;
 }
 
-const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: PreviewAreaProps, playerRef) => {
-  const { uploadedVideo, currentTime, setCurrentTime, selectedSentences = [], getHighlightSentenceByTime, getNextSentence, getPreviousSentence } = props;
+export default function PreviewArea({
+  playerRef,
+  uploadedVideo,
+  currentTime,
+  setCurrentTime,
+  selectedSentences = [],
+  getHighlightSentenceByTime,
+  getNextSentence,
+  getPreviousSentence,
+}: PreviewAreaProps) {
   const [duration, setDuration] = useState<number>(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -67,7 +74,7 @@ const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: Previ
     // 如果 EditingArea 中的被選取字幕列表為空，不應該進入此邏輯
     if (!hasSelectedSentences) return;
     const playingSentence = getHighlightSentenceByTime(target.currentTime);
-    // 檢查是否還在 被選取字幕列表 範圍內    
+    // 檢查是否還在 被選取字幕列表 範圍內
     if (!playingSentence) {
       // 不在選中字幕範圍內，查找下一個字幕
       const nextSentence = getNextSentence(target.currentTime);
@@ -99,10 +106,12 @@ const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: Previ
     const width = rect.width;
     const percentage = clickX / width;
     const newTime = percentage * duration;
-
-    const player = playerRef as React.RefObject<HTMLVideoElement>;
-    if (player.current) player.current.currentTime = newTime;
+    if (playerRef.current) playerRef.current.currentTime = newTime;
   };
+
+  const totalDuration = useMemo(() => {
+    return selectedSentences.reduce((acc, s) => acc + (s.endTime - s.startTime), 0);
+  }, [selectedSentences]);
 
   return (
     <div className="h-full flex flex-col bg-gray-900 rounded-lg overflow-hidden">
@@ -111,8 +120,7 @@ const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: Previ
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">預覽區域</h2>
           <div className="flex items-center space-x-4 text-sm text-gray-300">
-            <span>已選片段: {selectedSentences.length}</span>
-            <span>總時長: {formatTime(selectedSentences.reduce((acc, s) => acc + (s.endTime - s.startTime), 0))}</span>
+            <span>Highlight 總時長: {formatTime(totalDuration)}</span>
           </div>
         </div>
       </div>
@@ -185,13 +193,12 @@ const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: Previ
         <div className="flex items-center justify-center space-x-4">
           <button
             onClick={() => {
-              if (selectedSentences.length > 0) {
+              if (selectedSentences.length > 0 && playerRef.current) {
                 const prevSentence = getPreviousSentence(currentTime);
-                const videoEl = (playerRef as React.RefObject<HTMLVideoElement>).current;
-                if (prevSentence && videoEl) videoEl.currentTime = prevSentence.startTime;
+                if (prevSentence) playerRef.current.currentTime = prevSentence.startTime;
               }
             }}
-            className="p-2 text-gray-300 hover:text-white transition-colors disabled:opacity-50"
+            className="p-2 text-gray-300 hover:text-white transition-colors disabled:opacity-50 cursor-pointer"
             disabled={!hasSelectedSentences}
             title="上一個片段"
           >
@@ -200,7 +207,7 @@ const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: Previ
 
           <button
             onClick={isPlaying ? onPause : onPlay}
-            className={`p-3 rounded-full transition-colors ${!hasSelectedSentences ? 'bg-gray-600 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
+            className={`p-3 rounded-full transition-colors cursor-pointer ${!hasSelectedSentences ? 'bg-gray-600 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700'} text-white`}
             disabled={!hasSelectedSentences}
             title={hasSelectedSentences ? '請先選擇 Highlight 片段' : isPlaying ? '暫停' : '播放'}
           >
@@ -209,13 +216,12 @@ const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: Previ
 
           <button
             onClick={() => {
-              if (hasSelectedSentences && (playerRef as React.RefObject<HTMLVideoElement>).current) {
+              if (hasSelectedSentences && playerRef.current) {
                 const nextSentence = getNextSentence(currentTime);
-                const videoEl = (playerRef as React.RefObject<HTMLVideoElement>).current;
-                if (nextSentence && videoEl) videoEl.currentTime = nextSentence.startTime;
+                if (nextSentence) playerRef.current.currentTime = nextSentence.startTime;
               }
             }}
-            className="p-2 text-gray-300 hover:text-white transition-colors disabled:opacity-50"
+            className="p-2 text-gray-300 hover:text-white transition-colors disabled:opacity-50 cursor-pointer"
             disabled={!hasSelectedSentences}
             title="下一個片段"
           >
@@ -225,6 +231,4 @@ const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: Previ
       </div>
     </div>
   );
-});
-
-export default PreviewArea;
+}
