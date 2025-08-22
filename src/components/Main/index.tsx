@@ -7,13 +7,12 @@ import type { AIProcessResult } from '@/types';
 import { CheckIcon, ClockIcon, Loader2Icon } from 'lucide-react';
 
 export default function Main() {
-  const [uploadedVideo, setUploadedVideo] = useState<File | null>(null);
-  const [processState, setProcessState] = useState<{ isProcess: boolean; progress: number }>({ isProcess: false, progress: 0 });
-  const [highlightClips, setHighlightClips] = useState<AIProcessResult | null>(null);
-  const [error, setError] = useState<string>('');
-  const playerRef = useRef<HTMLVideoElement>(null);
-  // 播放器當前播放時間
-  const [currentTime, setCurrentTime] = useState(0);
+  const [uploadedVideo, setUploadedVideo] = useState<File | null>(null); // 上傳影片
+  const [processState, setProcessState] = useState<{ isProcess: boolean; progress: number }>({ isProcess: false, progress: 0 }); // AI 處理狀態
+  const [highlightClips, setHighlightClips] = useState<AIProcessResult | null>(null); // AI 處理結果
+  const [error, setError] = useState<string>(''); // 錯誤訊息
+  const [currentTime, setCurrentTime] = useState(0); // 播放器當前播放時間
+  const playerRef = useRef<HTMLVideoElement>(null); // 播放器 ref
 
   const handleVideoUpload = async (file: File) => {
     setError('');
@@ -64,8 +63,7 @@ export default function Main() {
     if (playerRef.current) playerRef.current.currentTime = time;
   }, []);
 
-  // TODO 應該在 API RESPONSE 中就排序好，這樣就不用每次都排序  
-  // 獲取所有選中的字幕，按時間排序
+  // 將所有選中的字幕，按時間排序，方便播放器播放
   const selectedSentences = useMemo(() => {
     if (!highlightClips) return [];
     return highlightClips.sections
@@ -91,11 +89,6 @@ export default function Main() {
     if(currentIndex >= 0) return selectedSentences[currentIndex - 1];
     return selectedSentences[0];
   }, [selectedSentences]);
-
- 
-  const handleTimeUpdate = useCallback((time: number) => {
-    setCurrentTime(time);
-  }, []);
 
   return (
     <main className="min-h-screen h-screen bg-gray-50 p-4">
@@ -159,7 +152,6 @@ export default function Main() {
             </div>
           </div>
         ) : (
-          /* 分屏編輯界面 */
           <div className="flex flex-col gap-4">
             {/* 頂部工具欄 */}
             <header className="flex-shrink-0 bg-white border-b border-gray-200 px-6 py-3">
@@ -171,8 +163,6 @@ export default function Main() {
               </div>
             </header>
 
-            {/* 分屏內容區域 */}
-            {/* <div className="flex-1 flex md:flex-row flex-col gap-4 overflow-hidden"> */}
             <div className="flex md:flex-row flex-col gap-4 overflow-hidden">
               {/* 左側：編輯區域 */}
               <EditingArea
@@ -184,7 +174,6 @@ export default function Main() {
               />
 
               {/* 右側：預覽區域 */}
-
               <PreviewArea
                 playerRef={playerRef}
                 uploadedVideo={uploadedVideo}

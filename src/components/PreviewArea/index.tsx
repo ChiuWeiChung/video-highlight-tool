@@ -39,27 +39,27 @@ export default function PreviewArea({
     };
   }, [uploadedVideo]);
 
-  // 進行播放
+  // 播放
   const onPlay = () => {
     setIsPlaying(true);
   };
-
+  
   // 暫停播放
   const onPause = () => {
     setIsPlaying(false);
   };
 
-  // 影片開始播放時 (只有影片第一次開始播放時觸發)
-  const handleStart = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+  // 進行播放
+  const handlePlay = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
     const target = e.target as HTMLVideoElement;
     const currentTime = target.currentTime;
-
     // 如果當前時間不在任何 被選取字幕列表 範圍內，跳轉到第一個選中字幕
     const currentSentence = getHighlightSentenceByTime(currentTime);
     if (!currentSentence) {
       const { startTime } = selectedSentences[0];
       target.currentTime = startTime;
     }
+    onPlay();
   };
 
   const handleCanPlay = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
@@ -108,6 +108,7 @@ export default function PreviewArea({
     if (playerRef.current) playerRef.current.currentTime = newTime;
   };
 
+  // 計算 Highlight 總時長
   const totalDuration = useMemo(() => {
     return selectedSentences.reduce((acc, s) => acc + (s.endTime - s.startTime), 0);
   }, [selectedSentences]);
@@ -142,7 +143,7 @@ export default function PreviewArea({
               controls={false}
               width="100%"
               height="100%"
-              onPlay={onPlay}
+              onPlay={handlePlay}
               onPause={onPause}
               onEnded={onPause}
               onTimeUpdate={handleTimeUpdate}

@@ -1,5 +1,21 @@
 import type { AIProcessResult, TranscriptSentence, TranscriptSection, MockAPIResponse } from '../types';
-import { MOCK_TRANSCRIPT_DATA } from './mockTranscriptData';
+
+// 獲取模擬數據
+const fetchMockTranscriptData = async (file: File): Promise<TranscriptSection[]> => {
+  try {
+    console.log('Mock AI: 開始獲取模擬數據...', file.name);
+    const response = await fetch('/mockTranscriptData.json');
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('❌ 無法載入模擬數據:', error);
+    // 如果 fetch 失敗，返回空數組或拋出錯誤
+    throw new Error('無法載入模擬轉錄數據');
+  }
+};
 
 // 生成隨機的處理時間（模擬 AI 處理）
 const generateProcessingTime = (): number => {
@@ -12,19 +28,22 @@ const generateId = (): string => {
 };
 
 // 將模擬數據轉換為 API 格式
-const convertToAPIFormat = (videoFile: File): AIProcessResult => {
+const convertToAPIFormat = async (videoFile: File): Promise<AIProcessResult> => {
   const videoId = generateId();
   const sections: TranscriptSection[] = [];
   let sentenceIdCounter = 0;
 
-  MOCK_TRANSCRIPT_DATA.forEach((sectionData, sectionIndex) => {
-    const sentences: TranscriptSentence[] = sectionData.sentences.map((sentence, sentenceIndex) => ({
+  // 非同步獲取模擬數據
+  const mockData = await fetchMockTranscriptData(videoFile);
+
+  mockData.forEach((sectionData, sectionIndex) => {
+    const sentences: TranscriptSentence[] = sectionData.sentences.map((sentence) => ({
       id: `sentence_${sentenceIdCounter++}`,
       text: sentence.text,
       startTime: sentence.startTime,
       endTime: sentence.endTime,
       isHighlight: sentence.isHighlight,
-      isSelected: sentence.isHighlight // 預設選中建議的 Highlight 字幕
+      isSelected: sentence.isHighlight, // 預設選中建議的 Highlight 字幕
     }));
 
     const section: TranscriptSection = {
@@ -32,47 +51,34 @@ const convertToAPIFormat = (videoFile: File): AIProcessResult => {
       title: sectionData.title,
       startTime: sentences[0].startTime,
       endTime: sentences[sentences.length - 1].endTime,
-      sentences
+      sentences,
     };
 
     sections.push(section);
   });
 
   // 生成完整轉錄文本
-  const fullTranscript = sections
-    .map(section => 
-      section.sentences
-        .map(sentence => sentence.text)
-        .join(' ')
-    )
-    .join(' ');
+  const fullTranscript = sections.map((section) => section.sentences.map((sentence) => sentence.text).join(' ')).join(' ');
 
   return {
     videoId,
     fullTranscript,
     sections,
-    totalDuration: sections[sections.length - 1].endTime, // Bug: 非總時長，而是最後一個片段的結束時間 
-    processingTime: generateProcessingTime()
+    totalDuration: sections[sections.length - 1].endTime, // Bug: 非總時長，而是最後一個片段的結束時間
+    processingTime: generateProcessingTime(),
   };
 };
 
 // 模擬 AI 處理延遲
 const simulateProcessingDelay = (duration: number): Promise<void> => {
-  return new Promise(resolve => setTimeout(resolve, duration));
+  return new Promise((resolve) => setTimeout(resolve, duration));
 };
 
 // Mock AI API 服務
 export class MockAIService {
-  /**
-   * 模擬 AI 處理影片並返回轉錄文本
-   */
-  static async processVideo(
-    videoFile: File,
-    onProgress?: (progress: number) => void
-  ): Promise<MockAPIResponse<AIProcessResult>> {
+  /** 模擬 AI 處理影片並返回轉錄文本 */
+  static async processVideo(videoFile: File, onProgress?: (progress: number) => void): Promise<MockAPIResponse<AIProcessResult>> {
     try {
-      // console.log('🤖 Mock AI: 開始處理影片...', videoFile.name);
-      
       // 模擬處理進度
       if (onProgress) {
         const progressInterval = setInterval(() => {
@@ -86,79 +92,50 @@ export class MockAIService {
 
         clearInterval(progressInterval);
         onProgress(100);
-      } else {
-        await simulateProcessingDelay(generateProcessingTime());
-      }
+      } else await simulateProcessingDelay(generateProcessingTime());
 
-      // TODO: 取得結果需要是 json 格式!
-      // 生成模擬結果
-      const result = convertToAPIFormat(videoFile);
-      
-      // console.log('✅ Mock AI: 處理完成', {
-      //   sections: result.sections.length,
-      //   totalSentences: result.sections.reduce((acc, section) => acc + section.sentences.length, 0),
-      //   highlightCount: result.sections.reduce((acc, section) => 
-      //     acc + section.sentences.filter(s => s.isHighlight).length, 0
-      //   ),
-      //   duration: result.totalDuration
-      // });
+      // 生成模擬結果（非同步獲取 JSON 數據）
+      const result = await convertToAPIFormat(videoFile);
 
       return {
         success: true,
         data: result,
-        message: '影片處理成功！已生成轉錄文本和Highlight建議。'
+        message: '影片處理成功！已生成轉錄文本和Highlight建議。',
       };
-
     } catch (error) {
       console.error('❌ Mock AI: 處理失敗', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : '未知錯誤',
-        message: '影片處理失敗，請重試。'
+        message: '影片處理失敗，請重試。',
       };
     }
   }
 
-  /**
-   * 更新字幕選擇狀態
-   */
-  static updateSentenceSelection(
-    result: AIProcessResult,
-    sentenceId: string,
-    isSelected: boolean
-  ): AIProcessResult {
-    const updatedSections = result.sections.map(section => ({
+  /** 更新字幕選擇狀態 */
+  static updateSentenceSelection(result: AIProcessResult, sentenceId: string, isSelected: boolean): AIProcessResult {
+    const updatedSections = result.sections.map((section) => ({
       ...section,
-      sentences: section.sentences.map(sentence =>
-        sentence.id === sentenceId
-          ? { ...sentence, isSelected }
-          : sentence
-      )
+      sentences: section.sentences.map((sentence) => (sentence.id === sentenceId ? { ...sentence, isSelected } : sentence)),
     }));
 
     return {
       ...result,
-      sections: updatedSections
+      sections: updatedSections,
     };
   }
 
-  /**
-   * 獲取選中的字幕列表
-   */
+  /** 獲取選中的字幕列表 */
   static getSelectedSentences(result: AIProcessResult): TranscriptSentence[] {
     return result.sections
-      .flatMap(section => section.sentences)
-      .filter(sentence => sentence.isSelected)
+      .flatMap((section) => section.sentences)
+      .filter((sentence) => sentence.isSelected)
       .sort((a, b) => a.startTime - b.startTime);
   }
 
-  /**
-   * 計算Highlight片段的總時長
-   */
+  /** 計算Highlight片段的總時長 */
   static calculateHighlightDuration(result: AIProcessResult): number {
     const selectedSentences = this.getSelectedSentences(result);
-    return selectedSentences.reduce((total, sentence) => 
-      total + (sentence.endTime - sentence.startTime), 0
-    );
+    return selectedSentences.reduce((total, sentence) => total + (sentence.endTime - sentence.startTime), 0);
   }
 }
