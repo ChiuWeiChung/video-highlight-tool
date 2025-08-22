@@ -2,20 +2,14 @@
 
 一個基於 React + TypeScript 的 AI 影片精華剪輯工具，能夠自動分析影片內容並生成精華片段建議。
 
-### 使用者介面
-- **響應式設計**: 支援桌面版和行動版瀏覽
-- **現代化 UI**: 使用 Tailwind CSS 打造簡潔美觀的介面
-- **直觀操作**: 拖放上傳、進度提示、錯誤處理
+## 測試指南
 
-
-## 🌐 線上 Demo
-
-### **測試影片建議**
+### **上傳影片建議**
 我在雲端空間準備了影片，方便 user 進行測試： [大谷翔平 50/50](https://drive.google.com/file/d/1CeRLI6ODufrLF3v7FOf2eemAB1acBYjE/view?usp=drive_link)  
 
 該影片可直接搭配程式碼中的 [mockData](./public/mockTranscriptData.json)，已預先配置轉錄數據，可立即展示完整功能流程。
 
-專案已部署至 GitHub Pages：
+**專案已部署至 GitHub Pages：**
 **[https://chiuweichung.github.io/video-highlight-tool/](https://chiuweichung.github.io/video-highlight-tool/)**
 
 ![DEMO 動畫](docs/5050demo.gif)
