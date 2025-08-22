@@ -41,7 +41,6 @@ const convertToAPIFormat = async (videoFile: File): Promise<AIProcessResult> => 
       id: `sentence_${sentenceIdCounter++}`,
       text: sentence.text,
       startTime: sentence.startTime,
-      endTime: sentence.endTime,
       isHighlight: sentence.isHighlight,
       isSelected: sentence.isHighlight, // 預設選中建議的 Highlight 字幕
     }));
@@ -50,7 +49,6 @@ const convertToAPIFormat = async (videoFile: File): Promise<AIProcessResult> => 
       id: `section_${sectionIndex}`,
       title: sectionData.title,
       startTime: sentences[0].startTime,
-      endTime: sentences[sentences.length - 1].endTime,
       sentences,
     };
 
@@ -64,7 +62,6 @@ const convertToAPIFormat = async (videoFile: File): Promise<AIProcessResult> => 
     videoId,
     fullTranscript,
     sections,
-    totalDuration: sections[sections.length - 1].endTime, // Bug: 非總時長，而是最後一個片段的結束時間
     processingTime: generateProcessingTime(),
   };
 };
@@ -131,11 +128,5 @@ export class MockAIService {
       .flatMap((section) => section.sentences)
       .filter((sentence) => sentence.isSelected)
       .sort((a, b) => a.startTime - b.startTime);
-  }
-
-  /** 計算Highlight片段的總時長 */
-  static calculateHighlightDuration(result: AIProcessResult): number {
-    const selectedSentences = this.getSelectedSentences(result);
-    return selectedSentences.reduce((total, sentence) => total + (sentence.endTime - sentence.startTime), 0);
   }
 }

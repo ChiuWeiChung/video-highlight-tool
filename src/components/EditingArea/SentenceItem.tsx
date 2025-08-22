@@ -8,7 +8,6 @@ interface SentenceItemProps {
     id: string;
     text: string;
     startTime: number;
-    endTime: number;
     isSelected: boolean;
     isHighlight?: boolean;
   };
@@ -51,7 +50,7 @@ const SentenceItem = forwardRef<HTMLDivElement, SentenceItemProps>(({ sentence, 
               className={`text-xs px-2 py-1 rounded transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50
                   ${isSelected ? 'text-blue-700 hover:text-blue-800 bg-blue-100 hover:bg-blue-200' : 'text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200'}`}
             >
-              {formatTime(sentence.startTime)} - {formatTime(sentence.endTime)}
+              {formatTime(sentence.startTime)}
             </button>
 
             {sentence.isHighlight && (

@@ -21,12 +21,12 @@ export default function Main() {
   };
 
   const handleAIProcessing = async (file: File) => {
-    setProcessState({isProcess:true, progress:0});
+    setProcessState({ isProcess: true, progress: 0 });
     setError('');
 
     try {
       const result = await MockAIService.processVideo(file, (progress) => {
-        setProcessState((prev) => ({...prev, progress}));
+        setProcessState((prev) => ({ ...prev, progress }));
       });
 
       if (result.success && result.data) {
@@ -38,24 +38,27 @@ export default function Main() {
     } catch (err) {
       setError(err instanceof Error ? err.message : '未知錯誤');
     } finally {
-      setProcessState((prev) => ({...prev, isProcess:false}));
+      setProcessState((prev) => ({ ...prev, isProcess: false }));
     }
   };
 
   const handleStartOver = () => {
     setUploadedVideo(null);
-    setProcessState({isProcess:false, progress:0});
+    setProcessState({ isProcess: false, progress: 0 });
     setHighlightClips(null);
     setError('');
     setCurrentTime(0);
   };
 
   // 字幕選擇處理
-  const handleSentenceSelect = useCallback((sentenceId: string, isSelected: boolean) => {
-    if (!highlightClips) return;
-    const updatedResult = MockAIService.updateSentenceSelection(highlightClips, sentenceId, isSelected);
-    setHighlightClips(updatedResult);
-  }, [highlightClips]);
+  const handleSentenceSelect = useCallback(
+    (sentenceId: string, isSelected: boolean) => {
+      if (!highlightClips) return;
+      const updatedResult = MockAIService.updateSentenceSelection(highlightClips, sentenceId, isSelected);
+      setHighlightClips(updatedResult);
+    },
+    [highlightClips],
+  );
 
   // 時間戳點擊處理
   const handleTimestampClick = useCallback((time: number) => {
@@ -66,29 +69,31 @@ export default function Main() {
   // 將所有選中的字幕，按時間排序，方便播放器播放
   const selectedSentences = useMemo(() => {
     if (!highlightClips) return [];
-    return highlightClips.sections
-      .flatMap(section => section.sentences)
-      .filter(sentence => sentence.isSelected)
-      .sort((a, b) => a.startTime - b.startTime);
+    return MockAIService.getSelectedSentences(highlightClips);
   }, [highlightClips]);
 
   // 查找當前時間點應該播放的字幕
-  const getHighlightSentenceByTime = useCallback((time: number) => {
-    return selectedSentences.find(({ startTime, endTime }) => time >= startTime && time <= endTime);
-  }, [selectedSentences]);
+  const getHighlightSentenceByTime = useCallback(
+    (time: number) => {
+      // 由於沒有 endTime，需要尋找最接近且不超過當前時間的句子
+      // 找到開始時間小於等於當前時間的句子，然後取最後一個（最接近的）
+      const validSentences = selectedSentences.filter((sentence) => sentence.startTime <= time);
+      if (validSentences.length === 0) return undefined;
 
-  // 查找下一個要播放的字幕
-  const getNextSentence = useCallback((time: number) => {
-    return selectedSentences.find(sentence => sentence.startTime > time);
-  }, [selectedSentences]);
+      // 找到下一個句子的開始時間，以此作為當前句子的結束時間
+      const currentSentence = validSentences[validSentences.length - 1];
+      const currentIndex = selectedSentences.indexOf(currentSentence);
+      const nextSentence = selectedSentences[currentIndex + 1];
 
-  // 查找前一個要播放的字幕
-  const getPreviousSentence = useCallback((time: number) => {
-    const currentIndex = selectedSentences.findIndex(sentence => time >= sentence.startTime && time <= sentence.endTime);
-    // 如果當前時間在選中的字幕範圍內，則返回前一個字幕
-    if(currentIndex >= 0) return selectedSentences[currentIndex - 1];
-    return selectedSentences[0];
-  }, [selectedSentences]);
+      // 如果有下一個句子，檢查當前時間是否在當前句子的範圍內
+      if (nextSentence && time >= nextSentence.startTime) {
+        return undefined; // 當前時間已超過當前句子，不在任何句子範圍內
+      }
+
+      return currentSentence;
+    },
+    [selectedSentences],
+  );
 
   return (
     <main className="min-h-screen h-screen bg-gray-50 p-4">
@@ -175,14 +180,13 @@ export default function Main() {
 
               {/* 右側：預覽區域 */}
               <PreviewArea
+                highlightClips={highlightClips}
                 playerRef={playerRef}
                 uploadedVideo={uploadedVideo}
                 currentTime={currentTime}
                 setCurrentTime={setCurrentTime}
                 selectedSentences={selectedSentences}
                 getHighlightSentenceByTime={getHighlightSentenceByTime}
-                getNextSentence={getNextSentence}
-                getPreviousSentence={getPreviousSentence}
               />
             </div>
           </div>
@@ -191,4 +195,3 @@ export default function Main() {
     </main>
   );
 }
-

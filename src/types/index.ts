@@ -3,7 +3,6 @@ export interface TranscriptSentence {
   id: string;
   text: string;
   startTime: number; // 秒
-  endTime: number; // 秒
   isHighlight: boolean; // 是否為建議的Highlight 字幕
   isSelected: boolean; // 用戶是否選中
 }
@@ -13,7 +12,6 @@ export interface TranscriptSection {
   id: string;
   title: string;
   startTime: number;
-  endTime: number;
   sentences: TranscriptSentence[];
 }
 
@@ -22,7 +20,6 @@ export interface AIProcessResult {
   videoId: string;
   fullTranscript: string;
   sections: TranscriptSection[];
-  totalDuration: number; // 影片總時長（秒）
   processingTime: number; // 處理時間（毫秒）
 }
 
