@@ -20,6 +20,10 @@ export default function PreviewArea({ playerRef, uploadedVideo, currentTime, set
   const currentSubtitle = getHighlightSentenceByTime(currentTime)?.text;
   const hasSelectedSentences = selectedSentences.length > 0;
 
+  const allSentences = useMemo(() => {
+    return highlightClips.sections.flatMap((section) => section.sentences);
+  }, [highlightClips]);
+
   // 內部實現 isInSelectedSentences 邏輯
   const isInSelectedSentences = (time: number) => {
     // 透過 flatMap 得到所有句子清單（包含選取以及未選取的）
@@ -102,10 +106,6 @@ export default function PreviewArea({ playerRef, uploadedVideo, currentTime, set
       }
     } else setCurrentTime(target.currentTime);
   };
-
-  const allSentences = useMemo(() => {
-    return highlightClips.sections.flatMap((section) => section.sentences);
-  }, [highlightClips]);
 
   const highlightSegments = useMemo(() => {
     return selectedSentences.map((sentence, index) => {
