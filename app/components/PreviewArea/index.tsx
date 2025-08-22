@@ -2,7 +2,6 @@ import { useState, useEffect, type RefObject, useMemo } from 'react';
 import type { TranscriptSentence } from '../../types';
 import { ArrowBigLeftIcon, ArrowBigRightIcon, Loader2Icon, PauseIcon, PlayIcon } from 'lucide-react';
 import { formatTime } from '../../lib/utils';
-import ReactPlayer from 'react-player';
 
 interface PreviewAreaProps {
   uploadedVideo: File;
@@ -113,6 +112,14 @@ export default function PreviewArea({
     return selectedSentences.reduce((acc, s) => acc + (s.endTime - s.startTime), 0);
   }, [selectedSentences]);
 
+  // 控制播放器播放/暫停
+  useEffect(() => {
+    const player = playerRef.current;
+    if (!player) return;
+    if (isPlaying) player.play();
+    else player.pause();
+  }, [isPlaying]);
+
   return (
     <div className="h-full flex flex-col bg-gray-900 rounded-lg overflow-hidden">
       {/* 標題欄 */}
@@ -129,14 +136,12 @@ export default function PreviewArea({
       <div className="flex-1 relative bg-black flex items-center justify-center ">
         {videoUrl ? (
           <div className="relative w-full h-full">
-            <ReactPlayer
+            <video
               ref={playerRef}
               src={videoUrl}
-              playing={isPlaying}
               controls={false}
               width="100%"
               height="100%"
-              onStart={handleStart}
               onPlay={onPlay}
               onPause={onPause}
               onEnded={onPause}
