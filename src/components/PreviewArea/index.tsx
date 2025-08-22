@@ -2,110 +2,38 @@ import { useState, useEffect, type RefObject, useMemo, useCallback } from 'react
 import type { AIProcessResult, TranscriptSentence } from '@/types';
 import { ArrowBigLeftIcon, ArrowBigRightIcon, Loader2Icon, PauseIcon, PlayIcon } from 'lucide-react';
 import { formatTime } from '@/lib/utils';
+import { MockAIService } from '@/services/mockAI';
 
 interface PreviewAreaProps {
   highlightClips: AIProcessResult;
   uploadedVideo: File;
   currentTime: number;
   setCurrentTime: (time: number) => void;
-  selectedSentences: TranscriptSentence[];
-  getHighlightSentenceByTime: (time: number) => TranscriptSentence | undefined;
+  currentSentence?: TranscriptSentence;
   playerRef: RefObject<HTMLVideoElement | null>;
 }
 
-export default function PreviewArea({ playerRef, uploadedVideo, currentTime, setCurrentTime, selectedSentences = [], getHighlightSentenceByTime, highlightClips }: PreviewAreaProps) {
+export default function PreviewArea({ playerRef, uploadedVideo, currentTime, setCurrentTime, highlightClips, currentSentence }: PreviewAreaProps) {
   const [duration, setDuration] = useState<number>(0);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const currentSubtitle = getHighlightSentenceByTime(currentTime)?.text;
+
+  // 將所有選中的字幕，按時間排序，方便播放器播放
+  const selectedSentences = useMemo(() => {
+    if (!highlightClips) return [];
+    return MockAIService.getSelectedSentences(highlightClips);
+  }, [highlightClips]);
+  // 判斷是否選中字幕
   const hasSelectedSentences = selectedSentences.length > 0;
 
   const allSentences = useMemo(() => {
-    return highlightClips.sections.flatMap((section) => section.sentences);
+    return MockAIService.getAllSentences(highlightClips);
   }, [highlightClips]);
 
-  // 內部實現 isInSelectedSentences 邏輯
-  const isInSelectedSentences = (time: number) => {
-    // 透過 flatMap 得到所有句子清單（包含選取以及未選取的）
-
-    // 找到當前時間對應的句子
-    for (let i = 0; i < allSentences.length; i++) {
-      const currentSentence = allSentences[i];
-      const nextSentence = allSentences[i + 1];
-      // 計算當前句子的結束時間
-      const endTime = nextSentence ? nextSentence.startTime : duration;
-
-      // 檢查時間是否在當前句子的範圍內
-      // 對於最後一個句子，使用 <= 來包含結束時間點
-      const isInRange = nextSentence ? time >= currentSentence.startTime && time < endTime : time >= currentSentence.startTime && time <= endTime;
-      if (isInRange) return currentSentence.isSelected;
-    }
-
-    return false;
-  };
-
-  // 查找下一個要播放的字幕
-  const getNextSentence = (time: number) => {
-    return selectedSentences.find((sentence) => sentence.startTime > time);
-  };
-
-  // 查找前一個要播放的字幕
-  const getPreviousSentence = (time: number) => {
-    // 找到當前正在播放的句子
-    const currentSentence = getHighlightSentenceByTime(time);
-    if (currentSentence) {
-      const currentIndex = selectedSentences.indexOf(currentSentence);
-      return currentIndex > 0 ? selectedSentences[currentIndex - 1] : selectedSentences[0];
-    }
-    return selectedSentences[0];
-  };
-
-  // 播放
-  const onPlay = () => {
-    setIsPlaying(true);
-  };
-
-  // 暫停播放
-  const onPause = () => {
-    setIsPlaying(false);
-  };
-
-  // 進行播放
-  const handlePlay = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
-    const target = e.target as HTMLVideoElement;
-    const currentTime = target.currentTime;
-    // 如果當前時間不在任何 被選取字幕列表 範圍內，跳轉到第一個選中字幕
-    const currentSentence = getHighlightSentenceByTime(currentTime);
-    if (!currentSentence) {
-      const { startTime } = selectedSentences[0];
-      target.currentTime = startTime;
-    }
-    onPlay();
-  };
-
-  const handleCanPlay = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
-    const target = e.target as HTMLVideoElement;
-    setDuration(target.duration);
-  };
-
-  // 當 video 播放時間變化時呼叫
-  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
-    const target = e.target as HTMLVideoElement;
-    const inSelectedSentences = isInSelectedSentences(target.currentTime);
-    // 檢查是否還在 被選取字幕列表 範圍內
-    if (!inSelectedSentences) {
-      // 不在選中字幕範圍內，查找下一個字幕
-      const nextSentence = getNextSentence(target.currentTime);
-      if (nextSentence) {
-        target.currentTime = nextSentence.startTime;
-        setCurrentTime(nextSentence.startTime);
-      } else {
-        // 進入此邏輯代表已經播放到最後一個字幕，將播放器時間重置到 0
-        target.currentTime = 0;
-        onPause();
-      }
-    } else setCurrentTime(target.currentTime);
-  };
+  const sumOfHighlightDuration = useMemo(() => {
+    if (!duration) return 0;
+    return MockAIService.getHighlightDuration(highlightClips, duration);
+  }, [highlightClips, duration]);
 
   const highlightSegments = useMemo(() => {
     return selectedSentences.map((sentence, index) => {
@@ -143,6 +71,79 @@ export default function PreviewArea({ playerRef, uploadedVideo, currentTime, set
     });
   }, [allSentences, duration, selectedSentences]);
 
+  // 確認當前時間是否在選中的字幕範圍內
+  const isInSelectedSentences = (time: number) => {
+    // 找到當前時間對應的句子
+    for (let i = 0; i < allSentences.length; i++) {
+      const item = allSentences[i];
+      const nextSentence = allSentences[i + 1];
+      // 計算當前句子的結束時間
+      const endTime = nextSentence ? nextSentence.startTime : duration;
+
+      // 檢查時間是否在當前句子的範圍內
+      // 對於最後一個句子，使用 <= 來包含結束時間點
+      const isInRange = nextSentence ? time >= item.startTime && time < endTime : time >= item.startTime && time <= endTime;
+      if (isInRange) return item.isSelected;
+    }
+
+    return false;
+  };
+
+  // 查找下一個要播放的字幕
+  const getNextSentence = (time: number) => {
+    return selectedSentences.find((sentence) => sentence.startTime > time);
+  };
+
+  // 查找前一個要播放的字幕
+  const getPreviousSentence = () => {
+    if (!currentSentence) return selectedSentences[0];
+    const currentIndex = selectedSentences.indexOf(currentSentence);
+    return currentIndex > 0 ? selectedSentences[currentIndex - 1] : selectedSentences[0];
+  };
+
+  // 播放
+  const onPlay = () => {
+    setIsPlaying(true);
+  };
+
+  // 暫停播放
+  const onPause = () => {
+    setIsPlaying(false);
+  };
+
+  // 進行播放
+  const handlePlay = () => {
+    if (playerRef.current && !currentSentence) {
+      const { startTime } = selectedSentences[0];
+      playerRef.current.currentTime = startTime;
+    }
+    onPlay();
+  };
+
+  const handleCanPlay = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const target = e.target as HTMLVideoElement;
+    setDuration(target.duration);
+  };
+
+  // 當 video 播放時間變化時呼叫
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    const target = e.target as HTMLVideoElement;
+    const inSelectedSentences = isInSelectedSentences(target.currentTime);
+    // 檢查是否還在 被選取字幕列表 範圍內
+    if (!inSelectedSentences) {
+      // 不在選中字幕範圍內，查找下一個字幕
+      const nextSentence = getNextSentence(target.currentTime);
+      if (nextSentence) {
+        target.currentTime = nextSentence.startTime;
+        setCurrentTime(nextSentence.startTime);
+      } else {
+        // 進入此邏輯代表已經播放到最後一個字幕，將播放器時間重置到 0
+        target.currentTime = 0;
+        onPause();
+      }
+    } else setCurrentTime(target.currentTime);
+  };
+
   // 根據點擊進度條的位置計算對應的時間，並將播放器跳轉到該時間點
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -176,6 +177,7 @@ export default function PreviewArea({ playerRef, uploadedVideo, currentTime, set
       <div className="flex-shrink-0 bg-gray-800 border-b border-gray-700 p-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white">預覽區域</h2>
+          <span className="text-sm text-gray-400">Highlight 總長度：{formatTime(sumOfHighlightDuration)}</span>
         </div>
       </div>
 
@@ -197,9 +199,9 @@ export default function PreviewArea({ playerRef, uploadedVideo, currentTime, set
             />
 
             {/* 字幕覆蓋層 */}
-            {currentSubtitle && (
+            {currentSentence && (
               <div className="absolute opacity-60 bottom-0 bg-black rounded-lg w-full left-1/2 -translate-x-1/2 p-4 z-10">
-                <p className="text-white text-center text-xs sm:text-sm md:text-lg leading-relaxed font-medium">{currentSubtitle}</p>
+                <p className="text-white text-center text-xs sm:text-sm md:text-lg leading-relaxed font-medium">{currentSentence.text}</p>
               </div>
             )}
           </div>
@@ -241,7 +243,7 @@ export default function PreviewArea({ playerRef, uploadedVideo, currentTime, set
           <button
             onClick={() => {
               if (selectedSentences.length > 0 && playerRef.current) {
-                const prevSentence = getPreviousSentence(currentTime);
+                const prevSentence = getPreviousSentence();
                 if (prevSentence) playerRef.current.currentTime = prevSentence.startTime;
               }
             }}

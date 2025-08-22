@@ -1,4 +1,4 @@
-import type { AIProcessResult, TranscriptSentence } from '../../types';
+import type { AIProcessResult, TranscriptSentence } from '@/types';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import SectionCard from './SectionCard';
 
@@ -6,18 +6,11 @@ interface EditingAreaProps {
   highlightClips: AIProcessResult;
   onSentenceSelect: (sentenceId: string, isSelected: boolean) => void;
   onTimestampClick: (time: number) => void;
-  currentTime?: number;
   className?: string;
-  getHighlightSentenceByTime: (time: number) => TranscriptSentence | undefined;
+  currentSentence?: TranscriptSentence;
 }
 
-export default function EditingArea({ 
-  highlightClips, 
-  onSentenceSelect, 
-  onTimestampClick, 
-  currentTime = 0,
-  getHighlightSentenceByTime,
-}: EditingAreaProps) {
+export default function EditingArea({ highlightClips, onSentenceSelect, onTimestampClick, currentSentence }: EditingAreaProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sentenceRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const lastScrolledIdRef = useRef<string | null>(null);
@@ -26,10 +19,6 @@ export default function EditingArea({
   const handleSentenceToggle = (sentence: TranscriptSentence) => {
     onSentenceSelect(sentence.id, !sentence.isSelected);
   };
-
-  const currentSentence = useMemo(() => {
-    return getHighlightSentenceByTime(currentTime);
-  }, [currentTime]);
 
   const isCurrentSentence = (sentence: TranscriptSentence): boolean => {
     if (!currentSentence) return false;
@@ -82,13 +71,9 @@ export default function EditingArea({
               <span>跟隨播放</span>
             </label>
 
-            <span >
+            <span>
               已選擇 {selectedCount} 句（共 {totalCount} 句）
             </span>
-            {/* <span>
-              已選擇 {highlightClips.sections.reduce((acc, section) => acc + section.sentences.filter((s) => s.isSelected).length, 0)} 句 共{' '}
-              {highlightClips.sections.reduce((acc, section) => acc + section.sentences.length, 0)}
-            </span> */}
           </div>
         </div>
       </div>

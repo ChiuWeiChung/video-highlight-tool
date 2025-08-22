@@ -15,7 +15,7 @@
         "id": "sent-2",
         "text": "and has played in more games than any active player and it needs to be special for those guys",
         "startTime": 5,
-        "isHighlight": false,
+        "isHighlight": true,
         "isSelected": false
       },
       {
@@ -36,7 +36,7 @@
         "id": "sent-5",
         "text": "sh is doing everything he can to get him to the playoffs this is one of those stress relief games",
         "startTime": 21,
-        "isHighlight": false,
+        "isHighlight": true,
         "isSelected": false
       },
       {
@@ -50,7 +50,7 @@
         "id": "sent-7",
         "text": "there they go throw to third beats him but he got his foot in",
         "startTime": 34,
-        "isHighlight": false,
+        "isHighlight": true,
         "isSelected": false
       },
       {
@@ -71,7 +71,7 @@
         "id": "sent-9",
         "text": "the accuracy of the slide in all of his bags he has a tendency to read the throw",
         "startTime": 43,
-        "isHighlight": false,
+        "isHighlight": true,
         "isSelected": false
       },
       {
@@ -85,14 +85,14 @@
         "id": "sent-11",
         "text": "sh Otani has stolen 50 bases in his first season with the Dodgers",
         "startTime": 58,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
         "id": "sent-12",
         "text": "that's a base hit to right field otani's two for two mun's headed for the plate",
         "startTime": 67,
-        "isHighlight": false,
+        "isHighlight": true,
         "isSelected": false
       },
       {
@@ -148,21 +148,21 @@
         "id": "sent-19",
         "text": "Here Comes pahz Otani heading for third relay is in time",
         "startTime": 114,
-        "isHighlight": false,
+        "isHighlight": true,
         "isSelected": false
       },
       {
         "id": "sent-20",
         "text": "just shy of finding himself a home run shy of the cycle after three Innings",
         "startTime": 118,
-        "isHighlight": false,
+        "isHighlight": true,
         "isSelected": false
       },
       {
         "id": "sent-21",
         "text": "he'll settle for his third hit in three Innings he's knocked in three",
         "startTime": 126,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       }
     ]
@@ -204,7 +204,7 @@
         "id": "sent-26",
         "text": "and he's one shy of the first 5050 campaign in baseball history",
         "startTime": 159,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
@@ -260,28 +260,28 @@
         "id": "sent-33",
         "text": "the first Dodger with 50 in a season is the first player in the history of this sport",
         "startTime": 202,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
         "id": "sent-34",
         "text": "of America's pastime to have 50 home runs and 50 stolen bases in the same season",
         "startTime": 208,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
         "id": "sent-35",
         "text": "show Otani has reached 50 and he's reached 50 on the same day",
         "startTime": 213,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
         "id": "sent-36",
         "text": "September 19th 2024 something this game has never seen",
         "startTime": 221,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
@@ -330,35 +330,35 @@
         "id": "sent-42",
         "text": "authenticate this line six for six",
         "startTime": 268,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
         "id": "sent-43",
         "text": "three home runs",
         "startTime": 277,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
         "id": "sent-44",
         "text": "five extra base hits",
         "startTime": 282,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
         "id": "sent-45",
         "text": "four runs scored",
         "startTime": 286,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
         "id": "sent-46",
         "text": "10 runs spatted in and a 50/50 club and a trip to the Post season",
         "startTime": 290,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
@@ -372,14 +372,14 @@
         "id": "sent-48",
         "text": "the 10 RBI the first 10 RBI game in Dodger history",
         "startTime": 306,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       },
       {
         "id": "sent-49",
         "text": "the 16th in baseball history send that still shot to the Hall of Fame",
         "startTime": 311,
-        "isHighlight": true,
+        "isHighlight": false,
         "isSelected": false
       }
     ]
@@ -393,14 +393,14 @@
         "id": "sent-50",
         "text": "there's the cliche that you never know what you're going to see when you go to the park",
         "startTime": 319,
-        "isHighlight": false,
+        "isHighlight": true,
         "isSelected": false
       },
       {
         "id": "sent-51",
         "text": "you got to change that cliche from now on there's one thing you know you'll never see",
         "startTime": 334,
-        "isHighlight": false,
+        "isHighlight": true,
         "isSelected": false
       },
       {

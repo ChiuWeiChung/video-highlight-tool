@@ -20,7 +20,6 @@ export interface AIProcessResult {
   videoId: string;
   fullTranscript: string;
   sections: TranscriptSection[];
-  processingTime: number; // 處理時間（毫秒）
 }
 
 // API 回應類型
