@@ -4,7 +4,7 @@ import type { AIProcessResult, TranscriptSentence, TranscriptSection, MockAPIRes
 const fetchMockTranscriptData = async (file: File): Promise<TranscriptSection[]> => {
   try {
     console.log('Mock AI: 開始獲取模擬數據...', file.name);
-    const response = await fetch('/mockTranscriptData.json');
+    const response = await fetch('./mockTranscriptData.json');
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
