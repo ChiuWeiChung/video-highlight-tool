@@ -1,7 +1,7 @@
 import { useState, useEffect, type RefObject, useMemo } from 'react';
-import type { TranscriptSentence } from '../../types';
+import type { TranscriptSentence } from '@/types';
 import { ArrowBigLeftIcon, ArrowBigRightIcon, Loader2Icon, PauseIcon, PlayIcon } from 'lucide-react';
-import { formatTime } from '../../lib/utils';
+import { formatTime } from '@/lib/utils';
 
 interface PreviewAreaProps {
   uploadedVideo: File;

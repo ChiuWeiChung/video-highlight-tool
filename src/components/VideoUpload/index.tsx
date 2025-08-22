@@ -1,6 +1,6 @@
 import { Loader2Icon, UploadIcon } from 'lucide-react';
 import React, { useState, useCallback, useRef } from 'react';
-import { MAX_FILE_SIZE, SUPPORTED_FORMATS } from '~/constant/video';
+import { MAX_FILE_SIZE, SUPPORTED_FORMATS } from 'src/constant/video';
 
 interface VideoUploadProps {
   onVideoUpload: (file: File) => void;

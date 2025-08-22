@@ -1,9 +1,9 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
-import VideoUpload from '../VideoUpload';
-import EditingArea from '../EditingArea';
-import PreviewArea from '../PreviewArea';
-import { MockAIService } from '../../services/mockAI';
-import type { AIProcessResult } from '../../types';
+import VideoUpload from '@/components/VideoUpload';
+import EditingArea from '@/components/EditingArea';
+import PreviewArea from '@/components/PreviewArea';
+import { MockAIService } from '@/services/mockAI';
+import type { AIProcessResult } from '@/types';
 import { CheckIcon, ClockIcon, Loader2Icon } from 'lucide-react';
 
 export default function Main() {

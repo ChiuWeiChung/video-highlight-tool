@@ -1,7 +1,7 @@
 
 import type { RefObject } from 'react';
 import SentenceItem from './SentenceItem';
-import type { TranscriptSentence } from '~/types';
+import type { TranscriptSentence } from 'src/types';
 
 
 interface Section {

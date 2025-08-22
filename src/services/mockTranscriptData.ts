@@ -1,4 +1,4 @@
-import type { TranscriptSection } from '../types';
+import type { TranscriptSection } from '@/types';
 
 export const MOCK_TRANSCRIPT_DATA: TranscriptSection[] = [
   {

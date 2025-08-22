@@ -1,7 +1,7 @@
 // 🧩 SentenceItem.tsx
 import { forwardRef } from 'react';
 import { CheckIcon } from 'lucide-react';
-import { formatTime } from '../../lib/utils';
+import { formatTime } from '@/lib/utils';
 
 interface SentenceItemProps {
   sentence: {
