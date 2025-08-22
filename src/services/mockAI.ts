@@ -1,7 +1,7 @@
-import type { AIProcessResult, TranscriptSentence, TranscriptSection, MockAPIResponse } from '../types';
+import type { AIProcessResult, TranscriptSentence, TranscriptSection, MockAPIResponse } from '@/types';
 
 // 獲取模擬數據
-const fetchMockTranscriptData = async (file: File): Promise<TranscriptSection[]> => {
+const fetchMockJSONData = async (file: File): Promise<TranscriptSection[]> => {
   try {
     console.log('Mock AI: 開始獲取模擬數據...', file.name);
     const response = await fetch('./mockTranscriptData.json');
@@ -34,7 +34,7 @@ const convertToAPIFormat = async (videoFile: File): Promise<AIProcessResult> => 
   let sentenceIdCounter = 0;
 
   // 非同步獲取模擬數據
-  const mockData = await fetchMockTranscriptData(videoFile);
+  const mockData = await fetchMockJSONData(videoFile);
 
   mockData.forEach((sectionData, sectionIndex) => {
     const sentences: TranscriptSentence[] = sectionData.sentences.map((sentence) => ({
@@ -60,9 +60,8 @@ const convertToAPIFormat = async (videoFile: File): Promise<AIProcessResult> => 
 
   return {
     videoId,
-    fullTranscript,
-    sections,
-    processingTime: generateProcessingTime(),
+    fullTranscript, // Full video transcript (但專案內沒有使用到)
+    sections, // Transcript split into sections/ Titles for each section/ Suggested Highlight sentences
   };
 };
 
@@ -122,11 +121,67 @@ export class MockAIService {
     };
   }
 
+  /** 取得含有所有字幕的列表 */
+  static getAllSentences(result: AIProcessResult): TranscriptSentence[] {
+    return result.sections.flatMap((section) => section.sentences).sort((a, b) => a.startTime - b.startTime);
+  }
+
   /** 獲取選中的字幕列表 */
   static getSelectedSentences(result: AIProcessResult): TranscriptSentence[] {
-    return result.sections
-      .flatMap((section) => section.sentences)
-      .filter((sentence) => sentence.isSelected)
-      .sort((a, b) => a.startTime - b.startTime);
+    const sentences = this.getAllSentences(result);
+    return sentences.filter((sentence) => sentence.isSelected);
+  }
+
+  /** 查找當前時間點應該播放的字幕 */
+  static getSelectedSentenceByTime(result: AIProcessResult, time: number): TranscriptSentence | undefined {
+    const selectedSentences = this.getSelectedSentences(result);
+
+    // 找到開始時間小於等於當前時間的句子，然後取最後一個（最接近的）
+    const validSentences = selectedSentences.filter((sentence) => sentence.startTime <= time);
+    if (validSentences.length === 0) return undefined;
+
+    // 找到下一個句子的開始時間，以此作為當前句子的結束時間
+    const currentSentence = validSentences[validSentences.length - 1];
+    const currentIndex = selectedSentences.indexOf(currentSentence);
+    const nextSentence = selectedSentences[currentIndex + 1];
+
+    // 如果有下一個句子，檢查當前時間是否在當前句子的範圍內
+    if (nextSentence && time >= nextSentence.startTime) {
+      return undefined; // 當前時間已超過當前句子，不在任何句子範圍內
+    }
+
+    return currentSentence;
+  }
+
+  /** 取得 Highlight 時間總長度 */
+  static getHighlightDuration(result: AIProcessResult, duration: number): number {
+    const allSentences = this.getAllSentences(result);
+    const selectedSentences = allSentences.filter((sentence) => sentence.isSelected);
+
+    let highlightDuration = 0;
+
+    // 遍歷每個已選取的字幕
+    for (const item of selectedSentences) {
+      let localDuration = 0;
+
+      // 在所有字幕中找到當前已選取字幕的位置
+      const currentIndex = allSentences.findIndex((sentence) => sentence.id === item.id);
+
+      if (currentIndex === allSentences.length - 1) {
+        // 如果是最後一句字幕：使用影片總長度減去當前字幕開始時間
+        localDuration = duration - item.startTime;
+      } else {
+        // 一般情況：下一句字幕（在所有字幕中的下一句）的開始時間減去當前句的開始時間
+        const nextSentence = allSentences[currentIndex + 1];
+        localDuration = nextSentence.startTime - item.startTime;
+      }
+
+      // 確保時間長度不為負數
+      if (localDuration > 0) {
+        highlightDuration += localDuration;
+      }
+    }
+
+    return highlightDuration;
   }
 }

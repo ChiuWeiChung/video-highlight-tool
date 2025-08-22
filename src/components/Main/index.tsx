@@ -66,34 +66,10 @@ export default function Main() {
     if (playerRef.current) playerRef.current.currentTime = time;
   }, []);
 
-  // 將所有選中的字幕，按時間排序，方便播放器播放
-  const selectedSentences = useMemo(() => {
-    if (!highlightClips) return [];
-    return MockAIService.getSelectedSentences(highlightClips);
-  }, [highlightClips]);
-
-  // 查找當前時間點應該播放的字幕
-  const getHighlightSentenceByTime = useCallback(
-    (time: number) => {
-      // 由於沒有 endTime，需要尋找最接近且不超過當前時間的句子
-      // 找到開始時間小於等於當前時間的句子，然後取最後一個（最接近的）
-      const validSentences = selectedSentences.filter((sentence) => sentence.startTime <= time);
-      if (validSentences.length === 0) return undefined;
-
-      // 找到下一個句子的開始時間，以此作為當前句子的結束時間
-      const currentSentence = validSentences[validSentences.length - 1];
-      const currentIndex = selectedSentences.indexOf(currentSentence);
-      const nextSentence = selectedSentences[currentIndex + 1];
-
-      // 如果有下一個句子，檢查當前時間是否在當前句子的範圍內
-      if (nextSentence && time >= nextSentence.startTime) {
-        return undefined; // 當前時間已超過當前句子，不在任何句子範圍內
-      }
-
-      return currentSentence;
-    },
-    [selectedSentences],
-  );
+  const currentSentence = useMemo(() => {
+    if (!highlightClips) return undefined;
+    return MockAIService.getSelectedSentenceByTime(highlightClips, currentTime);
+  }, [highlightClips, currentTime]);
 
   return (
     <main className="min-h-screen h-screen bg-gray-50 p-4">
@@ -173,9 +149,8 @@ export default function Main() {
               <EditingArea
                 highlightClips={highlightClips}
                 onSentenceSelect={handleSentenceSelect}
-                getHighlightSentenceByTime={getHighlightSentenceByTime}
                 onTimestampClick={handleTimestampClick}
-                currentTime={currentTime}
+                currentSentence={currentSentence}
               />
 
               {/* 右側：預覽區域 */}
@@ -185,8 +160,7 @@ export default function Main() {
                 uploadedVideo={uploadedVideo}
                 currentTime={currentTime}
                 setCurrentTime={setCurrentTime}
-                selectedSentences={selectedSentences}
-                getHighlightSentenceByTime={getHighlightSentenceByTime}
+                currentSentence={currentSentence}
               />
             </div>
           </div>
