@@ -101,7 +101,7 @@ export default function Main() {
     <main className="min-h-screen h-screen bg-gray-50 p-4">
       <div className="container h-full mx-auto">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">影片 Highlight 生成工具</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">影片 Highlight 產生器</h1>
         </div>
 
         {!uploadedVideo ? (

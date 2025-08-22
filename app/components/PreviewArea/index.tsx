@@ -67,7 +67,7 @@ const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: Previ
     // 如果 EditingArea 中的被選取字幕列表為空，不應該進入此邏輯
     if (!hasSelectedSentences) return;
     const playingSentence = getHighlightSentenceByTime(target.currentTime);
-    // 檢查是否還在 被選取字幕列表 範圍內
+    // 檢查是否還在 被選取字幕列表 範圍內    
     if (!playingSentence) {
       // 不在選中字幕範圍內，查找下一個字幕
       const nextSentence = getNextSentence(target.currentTime);
@@ -106,7 +106,6 @@ const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: Previ
 
   return (
     <div className="h-full flex flex-col bg-gray-900 rounded-lg overflow-hidden">
-
       {/* 標題欄 */}
       <div className="flex-shrink-0 bg-gray-800 border-b border-gray-700 p-4">
         <div className="flex items-center justify-between">
@@ -156,7 +155,6 @@ const PreviewArea = forwardRef<HTMLVideoElement, PreviewAreaProps>((props: Previ
 
       {/* 時間軸和控制區域 */}
       <div className="flex-shrink-0 bg-gray-800 p-4 space-y-4">
-
         {/* Highlight 時間軸 */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm text-gray-300">

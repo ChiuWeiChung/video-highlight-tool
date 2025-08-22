@@ -18,8 +18,8 @@ export default function EditingArea({
   onTimestampClick, 
   currentTime = 0,
   getHighlightSentenceByTime,
-  className
 }: EditingAreaProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
   const sentenceRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const lastScrolledIdRef = useRef<string | null>(null);
   const [autoFollow, setAutoFollow] = useState(true); // 是否跟隨播放進度自動捲動;
@@ -27,13 +27,13 @@ export default function EditingArea({
   const handleSentenceToggle = (sentence: TranscriptSentence) => {
     onSentenceSelect(sentence.id, !sentence.isSelected);
   };
-  
+
   const currentSentence = useMemo(() => {
     return getHighlightSentenceByTime(currentTime);
   }, [currentTime]);
-  
+
   const isCurrentSentence = (sentence: TranscriptSentence): boolean => {
-    if(!currentSentence) return false;
+    if (!currentSentence) return false;
     return currentSentence.id === sentence.id;
   };
 
@@ -41,14 +41,25 @@ export default function EditingArea({
   useEffect(() => {
     if (!autoFollow || !currentSentence?.id) return;
     if (lastScrolledIdRef.current === currentSentence.id) return;
+
     const el = sentenceRefs.current[currentSentence.id];
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const container = containerRef.current;
+    if (!el || !container) return;
+
+    // 容器與元素的可視區域座標
+    const cRectTop = container.getBoundingClientRect().top;
+    const eRectTop = el.getBoundingClientRect().top;
+
+    // 關鍵：將 viewport 相對座標換算成容器的捲動目標
+    const offsetFromContainerTop = eRectTop - cRectTop; // 元素頂到容器頂的距離（以目前畫面為基準）
+    // 讓元素置中
+    const target = container.scrollTop + offsetFromContainerTop - (container.clientHeight - el.clientHeight) / 2;
+    container.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
     lastScrolledIdRef.current = currentSentence.id;
   }, [autoFollow, currentSentence?.id]);
 
   return (
-    <div className="h-[15rem] md:h-full flex flex-col border rounded-lg overflow-hidden border-gray-200">
+    <div className="h-[20rem] md:h-full flex flex-col border rounded-lg overflow-hidden border-gray-200">
       {/* 標題欄 */}
       <div className="flex-shrink-0 bg-gray-800 text-white border-b border-gray-200 p-4">
         <div className="flex items-center justify-between">
@@ -67,14 +78,12 @@ export default function EditingArea({
       </div>
 
       {/* 轉錄文本內容 */}
-      <div className="flex-1 overflow-y-auto bg-gray-50 max-h-unset md:max-h-[70vh]">
+      <div ref={containerRef} className="flex-1 overflow-y-auto bg-gray-50 max-h-unset md:max-h-[70vh]">
         <div className="lg:p-4 space-y-6">
           {highlightClips.sections.map((section) => (
             <div key={section.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               {/* 章節標題 */}
-              <h3 className="bg-gray-50 p-2 border-b border-gray-200 text-md font-medium text-gray-900 ">
-                {section.title}
-              </h3>
+              <h3 className="bg-gray-50 p-2 border-b border-gray-200 text-md font-medium text-gray-900 ">{section.title}</h3>
 
               {/* 字幕列表 */}
               <div className="p-2 lg:p-4 space-y-3">
@@ -123,9 +132,10 @@ export default function EditingArea({
                               onTimestampClick(sentence.startTime);
                             }}
                             className={`
-                              text-xs px-2 py-1 rounded transition-colors cursor-pointer
+                              text-xs px-2 py-1 rounded transition-colors cursor-pointer disabled:cursor-not-allowed disabled:opacity-50
                               ${sentence.isSelected ? 'text-blue-700 hover:text-blue-800 bg-blue-100 hover:bg-blue-200' : 'text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200'}
                             `}
+                            disabled={!sentence.isSelected}
                           >
                             {formatTime(sentence.startTime)} - {formatTime(sentence.endTime)}
                           </button>
